@@ -1,4 +1,5 @@
 import { dayKey, lastNDays } from './utils';
+import type { Gem } from './types';
 
 const KEYS = {
   likes: 'pepite.likes',
@@ -7,6 +8,8 @@ const KEYS = {
   weekly: 'pepite.weekly',
   settings: 'pepite.settings',
   seen: 'pepite.seen',
+  likeTopics: 'pepite.likeTopics',
+  likedGems: 'pepite.likedGems',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -62,13 +65,41 @@ export function isLiked(id: string): boolean {
   return read<string[]>(KEYS.likes, []).includes(id);
 }
 
-export function toggleLike(id: string): boolean {
+export interface LikedEntry {
+  gem: Gem;
+  day: string;
+}
+
+export function toggleLike(gem: Gem): boolean {
   const likes = read<string[]>(KEYS.likes, []);
-  const idx = likes.indexOf(id);
+  const idx = likes.indexOf(gem.id);
   if (idx >= 0) likes.splice(idx, 1);
-  else likes.push(id);
+  else likes.push(gem.id);
   write(KEYS.likes, likes);
+
+  const counts = read<Record<string, number>>(KEYS.likeTopics, {});
+  counts[gem.topic] = Math.max(0, (counts[gem.topic] ?? 0) + (idx < 0 ? 1 : -1));
+  write(KEYS.likeTopics, counts);
+
+  const saved = read<LikedEntry[]>(KEYS.likedGems, []);
+  if (idx < 0) {
+    saved.unshift({ gem, day: dayKey() });
+  } else {
+    const keep = saved.filter((e) => e.gem.id !== gem.id);
+    saved.length = 0;
+    saved.push(...keep);
+  }
+  write(KEYS.likedGems, saved.slice(0, 200));
+
   return idx < 0;
+}
+
+export function getLikedGems(): LikedEntry[] {
+  return read<LikedEntry[]>(KEYS.likedGems, []);
+}
+
+export function getLikeTopicCounts(): Record<string, number> {
+  return read<Record<string, number>>(KEYS.likeTopics, {});
 }
 
 export function isSeen(id: string): boolean {

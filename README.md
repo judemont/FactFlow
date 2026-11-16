@@ -58,7 +58,7 @@ src/
 
 ## Privacy
 
-No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls.
+No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Sharing produces a link back to Pépite (`?gem=<id>`) that reopens the exact gem in the app — the Wikipedia link stays one tap away inside the gem.
 
 ## Next steps
 
