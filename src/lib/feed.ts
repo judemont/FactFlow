@@ -4,6 +4,7 @@ import * as wiki from './wiki';
 import { curatedFacts, fallbackFacts, topicSeeds, TOPICS } from './pool';
 import { isSeen, markSeen, recordView, getLikeTopicCounts } from './storage';
 import { hashString, shuffle } from './utils';
+import { showToast } from './toast';
 import type { Fact, Mode, Topic } from './types';
 
 export interface FeedState {
@@ -135,6 +136,12 @@ function randomBatchSupplier(): Supplier {
 
 function replenish(mode: Mode, topic: Topic | null): void {
   pass++;
+  if (mode === 'onthisday' || mode === 'nearby') {
+    feed.update((f) => ({ ...f, mode: 'foryou', topic: null }));
+    showToast('All caught up here — back to For you');
+    suppliers.push(...makeSuppliers('foryou', null), randomBatchSupplier());
+    return;
+  }
   let seeds: { title: string; topic: Topic }[];
   if (mode === 'onthisday') {
     seeds = topicSeeds.history.map((title) => ({ title, topic: 'history' as Topic }));
