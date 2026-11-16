@@ -36,11 +36,11 @@
       if (pos === 'current') return `translateY(${commit.dir < 0 ? '-100%' : '100%'})`;
       const incoming = commit.dir < 0 ? 'next' : 'prev';
       if (pos === incoming) return 'translate(0)';
-      return pos === 'next' ? 'translate(100%)' : 'translate(-100%)';
+      return pos === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
     }
     if (!dragging) {
       if (pos === 'current') return 'translate(0)';
-      return pos === 'next' ? 'translate(100%)' : 'translate(-100%)';
+      return pos === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
     }
     const capped =
       (dy < 0 && !canSkipForward) || (dy > 0 && !canSkipBack) ? dy * 0.25 : dy;
