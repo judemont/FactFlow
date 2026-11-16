@@ -29,7 +29,8 @@ let suppliers: Supplier[] = [];
 const added = new Set<string>();
 let generation = 0;
 let pass = 0;
-let runPromise: Promise<void> = Promise.resolve();
+let desired = 4;
+let pumpPromise: Promise<void> | null = null;
 let coords: { lat: number; lon: number } | null = null;
 
 function weightedSeeds(): { title: string; topic: Topic }[] {
@@ -240,10 +241,10 @@ function preloadImages(f: FeedState, from: number): void {
   }
 }
 
-async function fill(need: number, gen: number): Promise<void> {
+async function pump(gen: number): Promise<void> {
   try {
     let attempts = 0;
-    while (get(feed).facts.length < need && attempts < 24) {
+    while (get(feed).facts.length < desired && attempts < 24) {
       if (gen !== generation) return;
       attempts++;
       const sup = suppliers.shift();
@@ -276,8 +277,8 @@ async function fill(need: number, gen: number): Promise<void> {
     }
     if (gen !== generation) return;
     const after = get(feed);
-    if (after.facts.length < need) {
-      const missing = need - after.facts.length;
+    if (after.facts.length < desired) {
+      const missing = desired - after.facts.length;
       const extra = fallbackFacts()
         .filter((g) => !after.facts.some((x) => x.id === g.id))
         .slice(0, missing);
@@ -300,21 +301,18 @@ async function fill(need: number, gen: number): Promise<void> {
 }
 
 export async function ensureAhead(currentIndex = 0): Promise<void> {
-  const gen = generation;
-  const need = Math.max(4, currentIndex + 4);
+  desired = Math.max(desired, Math.max(4, currentIndex + 4));
   const before = get(feed);
-  if (before.facts.length >= need) {
+  if (before.facts.length >= desired) {
     preloadImages(before, currentIndex);
     return;
   }
-  await runPromise.catch(() => {});
-  if (gen !== generation) return;
-  if (get(feed).facts.length >= need) {
-    preloadImages(get(feed), currentIndex);
-    return;
-  }
-  runPromise = fill(need, gen);
-  await runPromise.catch(() => {});
+  if (pumpPromise) return pumpPromise;
+  const gen = generation;
+  pumpPromise = pump(gen).finally(() => {
+    pumpPromise = null;
+  });
+  await pumpPromise.catch(() => {});
 }
 
 export async function setMode(
@@ -325,6 +323,7 @@ export async function setMode(
   if (location) coords = location;
   generation++;
   pass = 0;
+  desired = 4;
   added.clear();
   suppliers = makeSuppliers(mode, topic);
   feed.set({ facts: [], loading: true, mode, topic, fallback: false });
@@ -353,6 +352,7 @@ export async function openShared(id: string): Promise<boolean> {
   if (!fact) return false;
   generation++;
   pass = 0;
+  desired = 4;
   added.clear();
   suppliers = makeSuppliers('foryou', null);
   feed.set({ facts: [fact], loading: true, mode: 'foryou', topic: null, fallback: false });

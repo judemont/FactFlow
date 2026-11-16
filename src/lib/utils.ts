@@ -90,42 +90,74 @@ function writeStored(url: string, entry: CacheEntry<unknown>): void {
   }
 }
 
-export async function fetchJSON<T>(url: string, ttlMs: number): Promise<T | null> {
+const MIN_REQUEST_GAP = 110;
+let lastRequestAt = 0;
+let queueTail: Promise<void> = Promise.resolve();
+const inflight = new Map<string, Promise<unknown>>();
+
+function scheduleRequest<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queueTail.then(async () => {
+    const gap = Date.now() - lastRequestAt;
+    if (gap < MIN_REQUEST_GAP) {
+      await new Promise((r) => setTimeout(r, MIN_REQUEST_GAP - gap));
+    }
+    lastRequestAt = Date.now();
+    return fn();
+  });
+  queueTail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+export function fetchJSON<T>(url: string, ttlMs: number): Promise<T | null> {
   const now = Date.now();
   const memHit = mem.get(url);
-  if (memHit && now - memHit.t < ttlMs) return memHit.v as T;
+  if (memHit && now - memHit.t < ttlMs) return Promise.resolve(memHit.v as T);
   const stored = readStored(url);
   if (stored && now - stored.t < ttlMs) {
     mem.set(url, stored);
-    return stored.v as T;
+    return Promise.resolve(stored.v as T);
   }
-  try {
-    let v: T | null = null;
-    let lastError: unknown = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const res = await fetch(url, { headers: { Accept: 'application/json' } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        v = (await res.json()) as T;
-        break;
-      } catch (err) {
-        lastError = err;
-        if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
+  const existing = inflight.get(url);
+  if (existing) return existing as Promise<T | null>;
+  const request = scheduleRequest(async () => {
+    try {
+      let v: T | null = null;
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await fetch(url, { headers: { Accept: 'application/json' } });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          v = (await res.json()) as T;
+          break;
+        } catch (err) {
+          lastError = err;
+          if (attempt === 0) {
+            const throttled = err instanceof Error && err.message === 'HTTP 429';
+            await new Promise((r) => setTimeout(r, throttled ? 1600 : 700));
+          }
+        }
       }
+      if (v !== null) {
+        const entry: CacheEntry<T> = { t: Date.now(), v };
+        mem.set(url, entry);
+        writeStored(url, entry);
+        return v;
+      }
+      throw lastError;
+    } catch {
+      if (stored) {
+        mem.set(url, stored);
+        return stored.v as T;
+      }
+      if (memHit) return memHit.v as T;
+      return null;
+    } finally {
+      inflight.delete(url);
     }
-    if (v !== null) {
-      const entry: CacheEntry<T> = { t: now, v };
-      mem.set(url, entry);
-      writeStored(url, entry);
-      return v;
-    }
-    throw lastError;
-  } catch {
-    if (stored) {
-      mem.set(url, stored);
-      return stored.v as T;
-    }
-    if (memHit) return memHit.v as T;
-    return null;
-  }
+  });
+  inflight.set(url, request);
+  return request;
 }

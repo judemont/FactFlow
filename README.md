@@ -34,14 +34,18 @@ src/
     pool.ts      Topic seed lists (7 topics) and a hand-curated pool of
                  verified facts used as an offline/API-failure fallback.
     feed.ts      Feed engine: per-mode candidate suppliers, quality
-                 filtering, seen-dedup, and queue top-up so the current
-                 fact plus the next 3 are always ready (images preloaded).
+                 filtering, seen-dedup, and coalesced queue top-ups so the
+                 current fact plus the next 3 are always ready (images
+                 preloaded); rapid scrolling cannot stack parallel fetches.
     storage.ts   localStorage only: likes, history, seen ids, daily streak,
                  weekly counter, settings. Nothing leaves the device.
                  Legacy `pepite.*` and `factflow.*` keys are migrated automatically.
     share.ts     Canvas-rendered shareable card (title + hook + image),
                  shared via the Web Share API with clipboard fallback.
     sound.ts     Optional Web Audio tick/pop + haptics. Off by default.
+    utils.ts     fetchJSON with TTL caching, in-flight request dedup,
+                 and a global rate limiter (min gap between Wikipedia
+                 calls, extra backoff on HTTP 429).
   components/
     Feed.svelte  Swipe physics (touch drag with velocity + resistance,
                  wheel, keyboard), horizontal swipe to skip a fact,
