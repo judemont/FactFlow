@@ -57,10 +57,10 @@
     const shared = new URLSearchParams(window.location.search).get('gem');
     if (shared) {
       void openShared(shared).then((ok) => {
-        if (!ok) void setMode('daily');
+        if (!ok) void setMode('foryou');
       });
     } else {
-      void setMode('daily');
+      void setMode('foryou');
     }
   });
 

@@ -1,5 +1,4 @@
 import type { Gem, Topic } from './types';
-import { daysSinceEpoch } from './utils';
 
 export const TOPICS: { id: Topic; label: string; emoji: string }[] = [
   { id: 'science', label: 'Science', emoji: '🧪' },
@@ -244,11 +243,6 @@ export const curatedGems: Gem[] = [
     articleUrl: 'https://en.wikipedia.org/wiki/Antikythera_mechanism',
   },
 ];
-
-export function dailyGem(): Gem {
-  const idx = daysSinceEpoch() % curatedGems.length;
-  return { ...curatedGems[idx], rare: true };
-}
 
 export function fallbackGems(): Gem[] {
   return curatedGems.map((g) => ({ ...g }));

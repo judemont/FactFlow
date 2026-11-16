@@ -1,9 +1,9 @@
 import { get, writable } from 'svelte/store';
 import { buildGem, type RawArticle } from './gem';
 import * as wiki from './wiki';
-import { curatedGems, dailyGem, fallbackGems, topicSeeds, TOPICS } from './pool';
+import { curatedGems, fallbackGems, topicSeeds, TOPICS } from './pool';
 import { isSeen, markSeen, recordView, getLikeTopicCounts } from './storage';
-import { shuffle } from './utils';
+import { hashString, shuffle } from './utils';
 import type { Gem, Mode, Topic } from './types';
 
 export interface FeedState {
@@ -17,7 +17,7 @@ export interface FeedState {
 export const feed = writable<FeedState>({
   gems: [],
   loading: true,
-  mode: 'daily',
+  mode: 'foryou',
   topic: null,
   fallback: false,
 });
@@ -28,14 +28,14 @@ let suppliers: Supplier[] = [];
 let loadingMore = false;
 let coords: { lat: number; lon: number } | null = null;
 
-function preferredSeeds(): { title: string; topic: Topic }[] {
+function weightedSeeds(): { title: string; topic: Topic }[] {
   const counts = getLikeTopicCounts();
-  const topics = [...TOPICS].sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0));
-  return topics.flatMap((t) =>
-    shuffle(topicSeeds[t.id])
-      .slice(0, 2)
-      .map((title) => ({ title, topic: t.id })),
-  );
+  return TOPICS.flatMap((t) => {
+    const weight = 2 + Math.min(4, counts[t.id] ?? 0);
+    return shuffle(topicSeeds[t.id])
+      .slice(0, weight)
+      .map((title) => ({ title, topic: t.id }));
+  });
 }
 
 function pageSupplier(title: string, topic?: Topic): Supplier {
@@ -59,7 +59,7 @@ function restSupplier(p: wiki.RestPage, fallbackTopic?: Topic): Supplier {
 }
 
 function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
-  if (mode === 'daily') {
+  if (mode === 'foryou') {
     return [
       async () => {
         const now = new Date();
@@ -88,7 +88,7 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
         }
         return null;
       },
-      ...shuffle(preferredSeeds()).map(({ title, topic }) => pageSupplier(title, topic)),
+      ...shuffle(weightedSeeds()).map(({ title, topic }) => pageSupplier(title, topic)),
     ];
   }
 
@@ -131,7 +131,7 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
     ];
   }
 
-  return shuffle(preferredSeeds()).map(({ title, topic }) => pageSupplier(title, topic));
+  return shuffle(weightedSeeds()).map(({ title, topic }) => pageSupplier(title, topic));
 }
 
 function preloadImages(f: FeedState, from: number): void {
@@ -168,6 +168,7 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
       if (!raw) continue;
       const gem = buildGem(raw);
       if (!gem) continue;
+      if (!gem.rare && hashString(gem.id) % 9 === 0) gem.rare = true;
       if (!gem.image) {
         gem.image = (await wiki.findArticleImage(raw.title).catch(() => null)) ?? undefined;
       }
@@ -207,9 +208,6 @@ export async function setMode(
   if (location) coords = location;
   suppliers = makeSuppliers(mode, topic);
   feed.set({ gems: [], loading: true, mode, topic, fallback: false });
-  if (mode === 'daily') {
-    feed.update((f) => ({ ...f, gems: [dailyGem()] }));
-  }
   await ensureAhead();
 }
 
@@ -233,8 +231,8 @@ export async function gemFromId(id: string): Promise<Gem | null> {
 export async function openShared(id: string): Promise<boolean> {
   const gem = await gemFromId(id);
   if (!gem) return false;
-  suppliers = makeSuppliers('daily', null);
-  feed.set({ gems: [gem], loading: true, mode: 'daily', topic: null, fallback: false });
+  suppliers = makeSuppliers('foryou', null);
+  feed.set({ gems: [gem], loading: true, mode: 'foryou', topic: null, fallback: false });
   await ensureAhead();
   return true;
 }

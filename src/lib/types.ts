@@ -7,7 +7,7 @@ export type Topic =
   | 'arts'
   | 'tech';
 
-export type Mode = 'daily' | 'onthisday' | 'topics' | 'nearby';
+export type Mode = 'foryou' | 'onthisday' | 'topics' | 'nearby';
 
 export interface Gem {
   id: string;

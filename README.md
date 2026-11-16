@@ -32,8 +32,7 @@ src/
                  screens ending on the highest-scoring remaining "twist"
                  sentence; some gems get a bonus "Wait, what?" fact.
     pool.ts      Topic seed lists (7 topics) and a hand-curated pool of
-                 verified gems used for the deterministic Gem of the day
-                 and as an offline/API-failure fallback.
+                 verified gems used as an offline/API-failure fallback.
     feed.ts      Feed engine: per-mode candidate suppliers, quality
                  filtering, seen-dedup, and queue top-up so the current
                  gem plus the next 3 are always ready (images preloaded).
@@ -47,13 +46,13 @@ src/
                  wheel, keyboard), double-tap like with heart burst,
                  progress bar, preloading.
     GemCard.svelte  Hook / story / payoff screens, Ken Burns background,
-                 rare-frame for the Gem of the day.
+                 rare-frame on occasional gems.
     ModeSwitcher / StatsSheet / ProgressBar / Toasts / Skeleton
 ```
 
 ## Discovery modes
 
-- **Gem of the day** — deterministic by date, curated, visually rare.
+- **For you** — the main feed: today's featured and most-read articles mixed with topic seeds, weighted by the topics you like the most.
 - **On this day** — Wikipedia's "selected" events for today's date.
 - **Topics** — science, history, crime & mysteries, space, nature, arts, tech.
 - **Near me** — geosearch around your location (permission asked only when the mode opens).

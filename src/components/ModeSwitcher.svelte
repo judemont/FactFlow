@@ -10,7 +10,7 @@
   let open = $state(false);
 
   const MODE_LABELS: Record<Mode, string> = {
-    daily: 'Gem of the day',
+    foryou: 'For you',
     onthisday: 'On this day',
     topics: 'Topics',
     nearby: 'Near me',
@@ -43,7 +43,7 @@
         },
         () => {
           showToast('Location denied — showing today instead');
-          void setMode('daily');
+          void setMode('foryou');
           onchange();
         },
         { timeout: 8000 },
