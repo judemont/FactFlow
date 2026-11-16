@@ -27,6 +27,7 @@ type Supplier = (() => Promise<RawArticle | null>) & { reusable?: boolean; done?
 let suppliers: Supplier[] = [];
 const added = new Set<string>();
 let generation = 0;
+let pass = 0;
 let runPromise: Promise<void> = Promise.resolve();
 let coords: { lat: number; lon: number } | null = null;
 
@@ -94,6 +95,56 @@ function onThisDaySupplier(): Supplier {
   };
   sup.reusable = true;
   return sup;
+}
+
+function randomBatchSupplier(): Supplier {
+  let titles: string[] = [];
+  let idx = 0;
+  let emptyBatches = 0;
+  const sup: Supplier = async () => {
+    while (idx >= titles.length) {
+      if (emptyBatches >= 2) {
+        sup.done = true;
+        return null;
+      }
+      const batch = shuffle(await wiki.getRandomTitles(20).catch(() => []));
+      if (!batch.length) {
+        emptyBatches++;
+        continue;
+      }
+      emptyBatches = 0;
+      titles = batch;
+      idx = 0;
+    }
+    while (idx < titles.length) {
+      const title = titles[idx++];
+      if (!title) continue;
+      try {
+        const raw = await pageSupplier(title)();
+        if (raw) return raw;
+      } catch {
+        continue;
+      }
+    }
+    sup.done = true;
+    return null;
+  };
+  sup.reusable = true;
+  return sup;
+}
+
+function replenish(mode: Mode, topic: Topic | null): void {
+  pass++;
+  let seeds: { title: string; topic: Topic }[];
+  if (mode === 'onthisday') {
+    seeds = topicSeeds.history.map((title) => ({ title, topic: 'history' as Topic }));
+  } else if (mode === 'topics' && topic) {
+    seeds = topicSeeds[topic].map((title) => ({ title, topic }));
+  } else {
+    seeds = TOPICS.flatMap((t) => topicSeeds[t.id].map((title) => ({ title, topic: t.id })));
+  }
+  suppliers.push(...shuffle(seeds).map(({ title, topic }) => pageSupplier(title, topic)));
+  suppliers.push(randomBatchSupplier());
 }
 
 function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
@@ -177,7 +228,11 @@ async function fill(need: number, gen: number): Promise<void> {
       if (gen !== generation) return;
       attempts++;
       const sup = suppliers.shift();
-      if (!sup) break;
+      if (!sup) {
+        replenish(get(feed).mode, get(feed).topic);
+        if (!suppliers.length) break;
+        continue;
+      }
       let raw: RawArticle | null = null;
       try {
         raw = await sup();
@@ -195,7 +250,8 @@ async function fill(need: number, gen: number): Promise<void> {
       }
       if (gen !== generation) return;
       if (!fact.image) continue;
-      if (isSeen(fact.id) || added.has(fact.id)) continue;
+      if (pass < 2 && isSeen(fact.id)) continue;
+      if (added.has(fact.id)) continue;
       added.add(fact.id);
       feed.update((f) => ({ ...f, facts: [...f.facts, fact] }));
     }
@@ -249,6 +305,7 @@ export async function setMode(
 ): Promise<void> {
   if (location) coords = location;
   generation++;
+  pass = 0;
   added.clear();
   suppliers = makeSuppliers(mode, topic);
   feed.set({ facts: [], loading: true, mode, topic, fallback: false });
@@ -276,6 +333,7 @@ export async function openShared(id: string): Promise<boolean> {
   const fact = await factFromId(id);
   if (!fact) return false;
   generation++;
+  pass = 0;
   added.clear();
   suppliers = makeSuppliers('foryou', null);
   feed.set({ facts: [fact], loading: true, mode: 'foryou', topic: null, fallback: false });

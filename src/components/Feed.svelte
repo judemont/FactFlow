@@ -80,8 +80,8 @@
     if (screenIndex < total - 1) {
       screenIndex++;
       playTick();
-    } else {
-      skipForward();
+    } else if (!skipForward()) {
+      void ensureAhead(index);
     }
   }
 

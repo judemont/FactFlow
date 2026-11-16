@@ -232,6 +232,21 @@ export async function getNearby(
   return (data?.query?.geosearch ?? []).map((g) => ({ title: g.title }));
 }
 
+export async function getRandomTitles(limit = 20): Promise<string[]> {
+  const data = await fetchJSON<{ query?: { random?: { title: string }[] } }>(
+    `${API}?${new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      formatversion: '2',
+      origin: '*',
+      list: 'random',
+      rnnamespace: '0',
+      rnlimit: String(limit),
+    })}`, 0,
+  );
+  return (data?.query?.random ?? []).map((r) => r.title);
+}
+
 export function guessTopic(title: string, extract: string): Topic {
   const t = `${title} ${extract.slice(0, 600)}`.toLowerCase();
   const has = (words: string[]) => words.some((w) => t.includes(w));
