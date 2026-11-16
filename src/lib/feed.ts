@@ -25,7 +25,8 @@ export const feed = writable<FeedState>({
 type Supplier = (() => Promise<RawArticle | null>) & { reusable?: boolean };
 
 let suppliers: Supplier[] = [];
-let loadingMore = false;
+let generation = 0;
+let runPromise: Promise<void> = Promise.resolve();
 let coords: { lat: number; lon: number } | null = null;
 
 function weightedSeeds(): { title: string; topic: Topic }[] {
@@ -162,18 +163,11 @@ function preloadImages(f: FeedState, from: number): void {
   }
 }
 
-export async function ensureAhead(currentIndex = 0): Promise<void> {
-  if (loadingMore) return;
-  const need = Math.max(4, currentIndex + 4);
-  const before = get(feed);
-  if (before.gems.length >= need) {
-    preloadImages(before, currentIndex);
-    return;
-  }
-  loadingMore = true;
+async function fill(need: number, gen: number): Promise<void> {
   try {
     let attempts = 0;
     while (get(feed).gems.length < need && attempts < 24) {
+      if (gen !== generation) return;
       attempts++;
       const sup = suppliers.shift();
       if (!sup) break;
@@ -183,6 +177,7 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
       } catch {
         raw = null;
       }
+      if (gen !== generation) return;
       if (!raw) continue;
       if (sup.reusable) suppliers.unshift(sup);
       const gem = buildGem(raw);
@@ -191,11 +186,13 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
       if (!gem.image) {
         gem.image = (await wiki.findArticleImage(raw.title).catch(() => null)) ?? undefined;
       }
+      if (gen !== generation) return;
       if (!gem.image) continue;
       if (isSeen(gem.id)) continue;
       markSeen(gem.id);
       feed.update((f) => ({ ...f, gems: [...f.gems, gem] }));
     }
+    if (gen !== generation) return;
     const after = get(feed);
     if (after.gems.length < need) {
       const missing = need - after.gems.length;
@@ -212,11 +209,30 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
       }
     }
   } finally {
-    loadingMore = false;
-    feed.update((f) => ({ ...f, loading: false }));
-    const f = get(feed);
-    preloadImages(f, Math.max(0, f.gems.length - 4));
+    if (gen === generation) {
+      feed.update((f) => ({ ...f, loading: false }));
+      const f = get(feed);
+      preloadImages(f, Math.max(0, f.gems.length - 4));
+    }
   }
+}
+
+export async function ensureAhead(currentIndex = 0): Promise<void> {
+  const gen = generation;
+  const need = Math.max(4, currentIndex + 4);
+  const before = get(feed);
+  if (before.gems.length >= need) {
+    preloadImages(before, currentIndex);
+    return;
+  }
+  await runPromise.catch(() => {});
+  if (gen !== generation) return;
+  if (get(feed).gems.length >= need) {
+    preloadImages(get(feed), currentIndex);
+    return;
+  }
+  runPromise = fill(need, gen);
+  await runPromise.catch(() => {});
 }
 
 export async function setMode(
@@ -225,6 +241,7 @@ export async function setMode(
   location?: { lat: number; lon: number },
 ): Promise<void> {
   if (location) coords = location;
+  generation++;
   suppliers = makeSuppliers(mode, topic);
   feed.set({ gems: [], loading: true, mode, topic, fallback: false });
   await ensureAhead();
@@ -250,6 +267,7 @@ export async function gemFromId(id: string): Promise<Gem | null> {
 export async function openShared(id: string): Promise<boolean> {
   const gem = await gemFromId(id);
   if (!gem) return false;
+  generation++;
   suppliers = makeSuppliers('foryou', null);
   feed.set({ gems: [gem], loading: true, mode: 'foryou', topic: null, fallback: false });
   await ensureAhead();
