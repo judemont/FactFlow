@@ -17,6 +17,7 @@
   let dy = $state(0);
   let dx = $state(0);
   let dragging = $state(false);
+  let notrans = $state(false);
   let commit = $state<{ dir: 1 | -1 } | null>(null);
   let bursts = $state<{ id: number; x: number; y: number }[]>([]);
   let likedMap = $state<Record<string, boolean>>({});
@@ -35,7 +36,7 @@
       if (pos === 'current') return `translateY(${commit.dir < 0 ? '-100%' : '100%'})`;
       const incoming = commit.dir < 0 ? 'next' : 'prev';
       if (pos === incoming) return 'translate(0)';
-      return `translateY(${commit.dir < 0 ? '100%' : '-100%'})`;
+      return pos === 'next' ? 'translate(100%)' : 'translate(-100%)';
     }
     if (!dragging) {
       if (pos === 'current') return 'translate(0)';
@@ -52,6 +53,7 @@
     if (commit) return;
     commit = { dir };
     setTimeout(() => {
+      notrans = true;
       if (dir < 0) {
         index++;
         void ensureAhead(index);
@@ -60,6 +62,11 @@
       }
       screenIndex = 0;
       commit = null;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          notrans = false;
+        });
+      });
     }, 360);
   }
 
@@ -94,7 +101,7 @@
   });
 
   function advance(): void {
-    if (!current) return;
+    if (!current || commit) return;
     if (screenIndex < total - 1) {
       screenIndex++;
       playTick();
@@ -284,7 +291,7 @@
   {#if $feed.loading && !current}
     <Skeleton />
   {:else if current}
-    <div class="stage" class:dragging>
+    <div class="stage" class:dragging class:notrans>
       {#if prevFact}
         <div class="slide" style:transform={slideTransform('prev')} aria-hidden="true">
           <FactCard fact={prevFact} screenIndex={0} />
@@ -336,7 +343,8 @@
     will-change: transform;
     transition: transform 0.36s var(--ease-spring);
   }
-  .stage.dragging .slide {
+  .stage.dragging .slide,
+  .stage.notrans .slide {
     transition: none;
   }
   .top {
