@@ -168,6 +168,10 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
       if (!raw) continue;
       const gem = buildGem(raw);
       if (!gem) continue;
+      if (!gem.image) {
+        gem.image = (await wiki.findArticleImage(raw.title).catch(() => null)) ?? undefined;
+      }
+      if (!gem.image) continue;
       if (isSeen(gem.id)) continue;
       markSeen(gem.id);
       feed.update((f) => ({ ...f, gems: [...f.gems, gem] }));
@@ -178,6 +182,11 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
       const extra = fallbackGems()
         .filter((g) => !after.gems.some((x) => x.id === g.id))
         .slice(0, missing);
+      for (const g of extra) {
+        if (!g.image) {
+          g.image = (await wiki.findArticleImage(g.title).catch(() => null)) ?? undefined;
+        }
+      }
       if (extra.length) {
         feed.update((f) => ({ ...f, gems: [...f.gems, ...extra], fallback: true }));
       }

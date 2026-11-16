@@ -19,6 +19,8 @@ src/
     wiki.ts      Wikipedia client (extracts, featured feed, on-this-day,
                  geosearch) with in-memory + localStorage caching (TTL),
                  retry with backoff, and stale-cache fallback on failure.
+                 Articles without a lead image get one via an imageinfo
+                 lookup; gems without any usable image are skipped.
     gem.ts       The gem pipeline: cleans the extract (headings, references,
                  parentheticals, bibliography junk), scores every sentence
                  for surprise (years, numbers, superlatives, striking words,

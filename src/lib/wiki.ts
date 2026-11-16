@@ -163,6 +163,47 @@ export async function getCategoryMembers(
     .filter((t) => !/^(List of|Index of|Outline of|Category:)/i.test(t));
 }
 
+const BAD_IMAGE =
+  /flag|coat[_ ]of[_ ]arms|logo|icon|symbol|locator|map(s)?[._ -]|commons|wiki[pd]ia|edit|ambox|question[_ ]book|disambig|portal|banner|signature|seal|mon(ogram)?|isbn|barcode|sound|voice|pronunciation/i;
+
+export async function findArticleImage(
+  title: string,
+  ttlMs = 86400000,
+): Promise<string | null> {
+  const data = await fetchJSON<{
+    query?: {
+      pages?: {
+        title: string;
+        imageinfo?: { url: string; thumburl?: string; width: number; mime: string }[];
+      }[];
+    };
+  }>(
+    `${API}?${new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      formatversion: '2',
+      origin: '*',
+      titles: title,
+      generator: 'images',
+      gimlimit: '12',
+      prop: 'imageinfo',
+      iiprop: 'url|size|mime',
+      iiurlwidth: '1000',
+    })}`,
+    ttlMs,
+  );
+  const files = data?.query?.pages ?? [];
+  for (const file of files) {
+    const info = file.imageinfo?.[0];
+    if (!info) continue;
+    if (BAD_IMAGE.test(file.title)) continue;
+    if (!/^image\/(jpeg|png)$/.test(info.mime)) continue;
+    if (info.width < 500) continue;
+    return info.thumburl ?? info.url;
+  }
+  return null;
+}
+
 export interface GeoResult {
   title: string;
 }
