@@ -58,7 +58,7 @@ src/
 
 ## Privacy
 
-No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls.
+No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they count in your stats and quietly bias which topics the feed serves next.
 
 ## Next steps
 

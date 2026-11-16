@@ -17,6 +17,7 @@
   let dy = $state(0);
   let dragging = $state(false);
   let bursts = $state<{ id: number; x: number; y: number }[]>([]);
+  let likedMap = $state<Record<string, boolean>>({});
 
   const gems = $derived($feed.gems);
   const current = $derived(gems[index] ?? null);
@@ -89,7 +90,8 @@
   function likeCurrent(x?: number, y?: number): void {
     const g = current;
     if (!g) return;
-    const liked = toggleLike(g.id);
+    const liked = toggleLike(g.id, g.topic);
+    likedMap[g.id] = liked;
     if (liked) {
       haptic(12);
       playPop();
@@ -202,7 +204,7 @@
     </header>
     <ActionRail
       gem={current}
-      liked={isLiked(current.id)}
+      liked={likedMap[current.id] ?? isLiked(current.id)}
       onlike={(x, y) => likeCurrent(x, y)}
     />
     {#each bursts as b (b.id)}

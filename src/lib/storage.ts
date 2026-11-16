@@ -1,4 +1,5 @@
 import { dayKey, lastNDays } from './utils';
+import type { Topic } from './types';
 
 const KEYS = {
   likes: 'pepite.likes',
@@ -7,6 +8,7 @@ const KEYS = {
   weekly: 'pepite.weekly',
   settings: 'pepite.settings',
   seen: 'pepite.seen',
+  likeTopics: 'pepite.likeTopics',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -62,13 +64,22 @@ export function isLiked(id: string): boolean {
   return read<string[]>(KEYS.likes, []).includes(id);
 }
 
-export function toggleLike(id: string): boolean {
+export function toggleLike(id: string, topic?: Topic): boolean {
   const likes = read<string[]>(KEYS.likes, []);
   const idx = likes.indexOf(id);
   if (idx >= 0) likes.splice(idx, 1);
   else likes.push(id);
   write(KEYS.likes, likes);
+  if (topic) {
+    const counts = read<Record<string, number>>(KEYS.likeTopics, {});
+    counts[topic] = Math.max(0, (counts[topic] ?? 0) + (idx < 0 ? 1 : -1));
+    write(KEYS.likeTopics, counts);
+  }
   return idx < 0;
+}
+
+export function getLikeTopicCounts(): Record<string, number> {
+  return read<Record<string, number>>(KEYS.likeTopics, {});
 }
 
 export function isSeen(id: string): boolean {

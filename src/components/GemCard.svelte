@@ -49,18 +49,18 @@
       </div>
     {:else if isPayoff}
       <div class="payoff">
-        <p class="payoff-line">You now know something 99% of people don't.</p>
         {#if gem.bonus}
           <div class="bonus">
             <span class="bonus-label">Wait, what?</span>
             <p>{gem.bonus}</p>
           </div>
         {/if}
+        <p class="payoff-title">{gem.title}</p>
         <div class="payoff-actions">
-          <button class="btn primary" onclick={share}>Share the card</button>
-          <a class="btn ghost" href={gem.articleUrl} target="_blank" rel="noopener noreferrer">
+          <a class="btn primary" href={gem.articleUrl} target="_blank" rel="noopener noreferrer">
             Read on Wikipedia
           </a>
+          <button class="btn ghost" onclick={share}>Share</button>
         </div>
       </div>
     {:else}
@@ -128,7 +128,7 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 24px 22px calc(env(safe-area-inset-bottom, 0px) + 96px);
+    padding: 24px 84px calc(env(safe-area-inset-bottom, 0px) + 96px) 22px;
   }
   .hook-block {
     display: flex;
@@ -176,13 +176,12 @@
     flex-direction: column;
     gap: 18px;
   }
-  .payoff-line {
+  .payoff-title {
     margin: 0;
-    font-size: clamp(1.5rem, 6vw, 2.3rem);
-    font-weight: 900;
-    line-height: 1.12;
-    letter-spacing: -0.02em;
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6);
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--muted);
   }
   .bonus {
     border: 1px solid var(--hairline);

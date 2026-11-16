@@ -2,7 +2,7 @@ import { get, writable } from 'svelte/store';
 import { buildGem, type RawArticle } from './gem';
 import * as wiki from './wiki';
 import { dailyGem, fallbackGems, topicSeeds, TOPICS } from './pool';
-import { isSeen, markSeen, recordView } from './storage';
+import { isSeen, markSeen, recordView, getLikeTopicCounts } from './storage';
 import { shuffle } from './utils';
 import type { Gem, Mode, Topic } from './types';
 
@@ -27,6 +27,16 @@ type Supplier = () => Promise<RawArticle | null>;
 let suppliers: Supplier[] = [];
 let loadingMore = false;
 let coords: { lat: number; lon: number } | null = null;
+
+function preferredSeeds(): { title: string; topic: Topic }[] {
+  const counts = getLikeTopicCounts();
+  const topics = [...TOPICS].sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0));
+  return topics.flatMap((t) =>
+    shuffle(topicSeeds[t.id])
+      .slice(0, 2)
+      .map((title) => ({ title, topic: t.id })),
+  );
+}
 
 function pageSupplier(title: string, topic?: Topic): Supplier {
   return async () => {
@@ -78,7 +88,7 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
         }
         return null;
       },
-      ...shuffle(TOPICS.flatMap((t) => shuffle(topicSeeds[t.id]).slice(0, 2).map((title) => pageSupplier(title, t.id)))),
+      ...shuffle(preferredSeeds()).map(({ title, topic }) => pageSupplier(title, topic)),
     ];
   }
 
@@ -121,7 +131,7 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
     ];
   }
 
-  return shuffle(TOPICS.flatMap((t) => topicSeeds[t.id])).map((title) => pageSupplier(title));
+  return shuffle(preferredSeeds()).map(({ title, topic }) => pageSupplier(title, topic));
 }
 
 function preloadImages(f: FeedState, from: number): void {
