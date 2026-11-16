@@ -73,8 +73,8 @@
       <div class="hook-block">
         <span class="topic">{fact.title}</span>
         <h1 class="hook" aria-label={fact.hook}>
-          {#each hookWords.slice(0, hookShown) as word, i (i)}
-            <span class="hook-word" aria-hidden="true">{word}</span>{' '}
+          {#each hookWords as word, i (i)}
+            <span class="hook-word" class:shown={i < hookShown} aria-hidden="true">{word}</span>{' '}
           {/each}
         </h1>
       </div>
@@ -189,7 +189,13 @@
   }
   .hook-word {
     display: inline-block;
+    opacity: 0;
+  }
+  .hook-word.shown {
     animation: word-in 0.18s var(--ease-spring) both;
+  }
+  .card.preview .hook-word {
+    animation: none;
   }
   @keyframes word-in {
     from {
