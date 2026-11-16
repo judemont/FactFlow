@@ -214,7 +214,7 @@ export function buildFact(a: RawArticle): Fact | null {
     )[0] ?? scored[0];
 
   if (best.score < HOOK_MIN) {
-    console.info(`[factflow] weak hook for "${a.title}" (score ${best.score.toFixed(1)})`);
+    console.info(`[factsflow] weak hook for "${a.title}" (score ${best.score.toFixed(1)})`);
   }
 
   const h = hashString(`${a.id}:${a.title}`);

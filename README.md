@@ -1,4 +1,4 @@
-# FactFlow
+# FactsFlow
 
 A TikTok-style vertical feed where every "video" is a fact extracted from a high-quality English Wikipedia article. Hook first, story after — learning that feels like a social feed.
 
@@ -38,7 +38,7 @@ src/
                  fact plus the next 3 are always ready (images preloaded).
     storage.ts   localStorage only: likes, history, seen ids, daily streak,
                  weekly counter, settings. Nothing leaves the device.
-                 Legacy `pepite.*` keys are migrated automatically.
+                 Legacy `pepite.*` and `factflow.*` keys are migrated automatically.
     share.ts     Canvas-rendered shareable card (title + hook + image),
                  shared via the Web Share API with clipboard fallback.
     sound.ts     Optional Web Audio tick/pop + haptics. Off by default.
@@ -61,7 +61,7 @@ src/
 
 ## Privacy
 
-No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Tapping a liked fact reopens it inside FactFlow (`?fact=<id>`; old `?gem=<id>` links still work) — the Wikipedia link stays one tap away inside the fact.
+No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Tapping a liked fact reopens it inside FactsFlow (`?fact=<id>`; old `?gem=<id>` links still work) — the Wikipedia link stays one tap away inside the fact.
 
 ## Next steps
 

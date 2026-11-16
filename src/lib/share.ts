@@ -74,7 +74,7 @@ export async function renderCard(fact: Fact): Promise<Blob | null> {
 
   ctx.fillStyle = '#ffb454';
   ctx.font = '700 34px system-ui, sans-serif';
-  ctx.fillText('FACTFLOW', 72, 96);
+  ctx.fillText('FACTSFLOW', 72, 96);
 
   ctx.fillStyle = '#fafafa';
   ctx.font = '800 76px system-ui, sans-serif';
@@ -110,7 +110,7 @@ export async function shareFact(fact: Fact): Promise<ShareResult> {
     try {
       const blob = await renderCard(fact);
       if (blob && typeof navigator.canShare === 'function') {
-        const file = new File([blob], 'factflow.png', { type: 'image/png' });
+        const file = new File([blob], 'factsflow.png', { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],

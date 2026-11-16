@@ -54,7 +54,7 @@ interface CacheEntry<T> {
   v: T;
 }
 
-const CACHE_PREFIX = 'factflow:cache:';
+const CACHE_PREFIX = 'factsflow:cache:';
 const CACHE_MAX_ENTRIES = 80;
 const mem = new Map<string, CacheEntry<unknown>>();
 

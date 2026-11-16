@@ -2,14 +2,14 @@ import { dayKey, lastNDays } from './utils';
 import type { Fact } from './types';
 
 const KEYS = {
-  likes: 'factflow.likes',
-  history: 'factflow.history',
-  streak: 'factflow.streak',
-  weekly: 'factflow.weekly',
-  settings: 'factflow.settings',
-  seen: 'factflow.seen',
-  likeTopics: 'factflow.likeTopics',
-  likedFacts: 'factflow.likedFacts',
+  likes: 'factsflow.likes',
+  history: 'factsflow.history',
+  streak: 'factsflow.streak',
+  weekly: 'factsflow.weekly',
+  settings: 'factsflow.settings',
+  seen: 'factsflow.seen',
+  likeTopics: 'factsflow.likeTopics',
+  likedFacts: 'factsflow.likedFacts',
 } as const;
 
 const LEGACY_KEYS: [oldKey: string, newKey: string][] = [
@@ -21,6 +21,14 @@ const LEGACY_KEYS: [oldKey: string, newKey: string][] = [
   ['pepite.seen', KEYS.seen],
   ['pepite.likeTopics', KEYS.likeTopics],
   ['pepite.likedGems', KEYS.likedFacts],
+  ['factflow.likes', KEYS.likes],
+  ['factflow.history', KEYS.history],
+  ['factflow.streak', KEYS.streak],
+  ['factflow.weekly', KEYS.weekly],
+  ['factflow.settings', KEYS.settings],
+  ['factflow.seen', KEYS.seen],
+  ['factflow.likeTopics', KEYS.likeTopics],
+  ['factflow.likedFacts', KEYS.likedFacts],
 ];
 
 function migrateLegacy(): void {
@@ -199,7 +207,12 @@ export function clearAllData(): void {
     }
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith('factflow:cache:') || key.startsWith('pepite')))
+      if (
+        key &&
+        (key.startsWith('factsflow:cache:') ||
+          key.startsWith('factflow') ||
+          key.startsWith('pepite'))
+      )
         localStorage.removeItem(key);
     }
   } catch {
