@@ -51,6 +51,24 @@ export async function getArticle(title: string, ttlMs = 86400000): Promise<WikiP
   return toPage(page);
 }
 
+export async function getPageById(pageId: string, ttlMs = 86400000): Promise<WikiPage | null> {
+  const pages = await query(
+    {
+      action: 'query',
+      pageids: pageId,
+      prop: 'extracts|pageimages|info',
+      explaintext: '1',
+      exsectionformat: 'plain',
+      inprop: 'url',
+      pithumbsize: '1000',
+    },
+    ttlMs,
+  );
+  const page = pages[0];
+  if (!page || page.missing || !page.extract) return null;
+  return toPage(page);
+}
+
 function toPage(page: ApiPage): WikiPage {
   return {
     id: String(page.pageid),

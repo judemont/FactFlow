@@ -1,7 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { buildGem, type RawArticle } from './gem';
 import * as wiki from './wiki';
-import { dailyGem, fallbackGems, topicSeeds, TOPICS } from './pool';
+import { curatedGems, dailyGem, fallbackGems, topicSeeds, TOPICS } from './pool';
 import { isSeen, markSeen, recordView, getLikeTopicCounts } from './storage';
 import { shuffle } from './utils';
 import type { Gem, Mode, Topic } from './types';
@@ -207,4 +207,25 @@ export async function setMode(
 export function onGemShown(gem: Gem): string[] {
   markSeen(gem.id);
   return recordView(gem.id);
+}
+
+export async function gemFromId(id: string): Promise<Gem | null> {
+  if (id.startsWith('curated-')) {
+    return curatedGems.find((g) => g.id === id) ?? null;
+  }
+  if (/^\d+$/.test(id)) {
+    const page = await wiki.getPageById(id);
+    return page ? buildGem({ ...page }) : null;
+  }
+  const page = await wiki.getArticle(id);
+  return page ? buildGem({ ...page }) : null;
+}
+
+export async function openShared(id: string): Promise<boolean> {
+  const gem = await gemFromId(id);
+  if (!gem) return false;
+  suppliers = makeSuppliers('daily', null);
+  feed.set({ gems: [gem], loading: true, mode: 'daily', topic: null, fallback: false });
+  await ensureAhead();
+  return true;
 }

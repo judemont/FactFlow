@@ -1,10 +1,20 @@
 <script lang="ts">
-  import { getStats, soundEnabled, setSound, clearAllData, type Stats } from '../lib/storage';
+  import {
+    getStats,
+    getLikedGems,
+    soundEnabled,
+    setSound,
+    clearAllData,
+    toggleLike,
+    type Stats,
+    type LikedEntry,
+  } from '../lib/storage';
   import { showToast } from '../lib/toast';
 
   let open = $state(false);
   let stats = $state<Stats>(getStats());
   let sound = $state(soundEnabled());
+  let liked = $state<LikedEntry[]>([]);
 
   $effect(() => {
     const id = setInterval(() => {
@@ -15,7 +25,16 @@
 
   function toggle(): void {
     open = !open;
-    if (open) stats = getStats();
+    if (open) {
+      stats = getStats();
+      liked = getLikedGems();
+    }
+  }
+
+  function removeLike(entry: LikedEntry): void {
+    toggleLike(entry.gem);
+    liked = liked.filter((e) => e.gem.id !== entry.gem.id);
+    stats = getStats();
   }
 
   function toggleSound(): void {
@@ -67,6 +86,28 @@
             ></div>
           </div>
         {/each}
+      </div>
+      <div class="liked" aria-label="Liked gems">
+        <span class="section-title">Liked gems</span>
+        {#if liked.length}
+          <div class="liked-list">
+            {#each liked as e (e.gem.id)}
+              <div class="liked-row">
+                <div class="liked-info">
+                  <a class="liked-title" href={e.gem.articleUrl} target="_blank" rel="noopener noreferrer">
+                    {e.gem.title}
+                  </a>
+                  <span class="liked-hook">{e.gem.hook}</span>
+                </div>
+                <button class="unlike" aria-label={`Remove ${e.gem.title} from likes`} onclick={() => removeLike(e)}>
+                  ♥
+                </button>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="empty">No likes yet — double-tap a gem you enjoy.</p>
+        {/if}
       </div>
       <div class="settings">
         <button class="setting" onclick={toggleSound} aria-pressed={sound}>
@@ -121,6 +162,8 @@
     border-radius: 24px 24px 0 0;
     padding: 24px 20px calc(env(safe-area-inset-bottom, 0px) + 24px);
     animation: sheet-up 0.28s var(--ease-spring);
+    max-height: 82vh;
+    overflow-y: auto;
   }
   @keyframes sheet-up {
     from { transform: translateY(100%); }
@@ -179,6 +222,73 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+  }
+  .liked {
+    margin-bottom: 20px;
+  }
+  .section-title {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .liked-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .liked-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .liked-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .liked-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .liked-title:hover {
+    text-decoration: underline;
+  }
+  .liked-hook {
+    font-size: 0.8rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .unlike {
+    color: var(--accent);
+    font-size: 1.1rem;
+    padding: 6px;
+    border-radius: 999px;
+  }
+  .unlike:active {
+    transform: scale(0.85);
+  }
+  .empty {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--faint);
   }
   .setting {
     display: flex;

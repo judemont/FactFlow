@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { feed, setMode, ensureAhead, onGemShown } from '../lib/feed';
+  import { feed, setMode, ensureAhead, onGemShown, openShared } from '../lib/feed';
   import { toggleLike, isLiked } from '../lib/storage';
   import { playTick, playPop, haptic } from '../lib/sound';
   import { showToast } from '../lib/toast';
@@ -54,7 +54,14 @@
   });
 
   onMount(() => {
-    void setMode('daily');
+    const shared = new URLSearchParams(window.location.search).get('gem');
+    if (shared) {
+      void openShared(shared).then((ok) => {
+        if (!ok) void setMode('daily');
+      });
+    } else {
+      void setMode('daily');
+    }
   });
 
   function advance(): void {
@@ -90,7 +97,7 @@
   function likeCurrent(x?: number, y?: number): void {
     const g = current;
     if (!g) return;
-    const liked = toggleLike(g.id, g.topic);
+    const liked = toggleLike(g);
     likedMap[g.id] = liked;
     if (liked) {
       haptic(12);

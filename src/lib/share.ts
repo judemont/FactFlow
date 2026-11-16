@@ -39,6 +39,11 @@ function wrapText(
   return lines;
 }
 
+export function gemUrl(gem: Gem): string {
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return `${base}?gem=${encodeURIComponent(gem.id)}`;
+}
+
 export async function renderCard(gem: Gem): Promise<Blob | null> {
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -91,7 +96,8 @@ export async function renderCard(gem: Gem): Promise<Blob | null> {
 
   ctx.fillStyle = 'rgba(250,250,250,0.45)';
   ctx.font = '400 32px system-ui, sans-serif';
-  ctx.fillText(`en.wikipedia.org/wiki/${gem.title.replace(/ /g, '_')}`, 72, H - 72);
+  const link = gemUrl(gem);
+  ctx.fillText(link.length > 64 ? `${link.slice(0, 61)}…` : link, 72, H - 72);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
 }
@@ -99,6 +105,7 @@ export async function renderCard(gem: Gem): Promise<Blob | null> {
 export type ShareResult = 'shared' | 'copied' | 'failed';
 
 export async function shareGem(gem: Gem): Promise<ShareResult> {
+  const url = gemUrl(gem);
   try {
     const blob = await renderCard(gem);
     if (blob && typeof navigator.canShare === 'function') {
@@ -108,15 +115,20 @@ export async function shareGem(gem: Gem): Promise<ShareResult> {
           files: [file],
           title: gem.title,
           text: gem.hook,
+          url,
         });
         return 'shared';
       }
+    }
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: gem.title, text: gem.hook, url });
+      return 'shared';
     }
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') return 'failed';
   }
   try {
-    await navigator.clipboard.writeText(`${gem.hook} — ${gem.articleUrl}`);
+    await navigator.clipboard.writeText(`${gem.hook} — ${url}`);
     return 'copied';
   } catch {
     return 'failed';
