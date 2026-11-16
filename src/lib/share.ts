@@ -106,29 +106,29 @@ export type ShareResult = 'shared' | 'copied' | 'failed';
 
 export async function shareGem(gem: Gem): Promise<ShareResult> {
   const url = gemUrl(gem);
-  try {
-    const blob = await renderCard(gem);
-    if (blob && typeof navigator.canShare === 'function') {
-      const file = new File([blob], 'pepite.png', { type: 'image/png' });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: gem.title,
-          text: gem.hook,
-          url,
-        });
-        return 'shared';
+  if (typeof navigator.share === 'function') {
+    try {
+      const blob = await renderCard(gem);
+      if (blob && typeof navigator.canShare === 'function') {
+        const file = new File([blob], 'pepite.png', { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: gem.title,
+            text: gem.hook,
+            url,
+          });
+          return 'shared';
+        }
       }
-    }
-    if (typeof navigator.share === 'function') {
       await navigator.share({ title: gem.title, text: gem.hook, url });
       return 'shared';
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return 'failed';
     }
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') return 'failed';
   }
   try {
-    await navigator.clipboard.writeText(`${gem.hook} — ${url}`);
+    await navigator.clipboard.writeText(url);
     return 'copied';
   } catch {
     return 'failed';
