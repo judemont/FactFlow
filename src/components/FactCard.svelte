@@ -7,11 +7,9 @@
   let {
     fact,
     screenIndex,
-    preview = false,
   }: {
     fact: Fact;
     screenIndex: number;
-    preview?: boolean;
   } = $props();
 
   const isHook = $derived(screenIndex === 0);
@@ -22,7 +20,7 @@
   let hookShown = $state(0);
 
   $effect(() => {
-    if (preview || hookWords.length === 0) {
+    if (hookWords.length === 0) {
       hookShown = hookWords.length;
       return;
     }
@@ -58,7 +56,7 @@
   }
 </script>
 
-<article class="card" class:preview class:rare={fact.rare} aria-label={fact.title}>
+<article class="card" class:rare={fact.rare} aria-label={fact.title}>
   <div class="bg" class:nograd={!fact.image}>
     {#if fact.image}
       <img src={fact.image} alt="" />
@@ -111,11 +109,6 @@
     inset: 0;
     overflow: hidden;
     background: var(--bg);
-  }
-  .card.preview {
-    transform: scale(0.94) translateY(20px);
-    opacity: 0.55;
-    border-radius: 24px;
   }
   .bg {
     position: absolute;
@@ -193,9 +186,6 @@
   }
   .hook-word.shown {
     animation: word-in 0.18s var(--ease-spring) both;
-  }
-  .card.preview .hook-word {
-    animation: none;
   }
   @keyframes word-in {
     from {

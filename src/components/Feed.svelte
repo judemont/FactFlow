@@ -18,28 +18,58 @@
   let dx = $state(0);
   let axis: 'x' | 'y' | null = null;
   let dragging = $state(false);
+  let commit = $state<{ axis: 'x' | 'y'; dir: 1 | -1 } | null>(null);
   let bursts = $state<{ id: number; x: number; y: number }[]>([]);
   let likedMap = $state<Record<string, boolean>>({});
 
   const facts = $derived($feed.facts);
   const current = $derived(facts[index] ?? null);
+  const prevFact = $derived(facts[index - 1] ?? null);
   const nextFact = $derived(facts[index + 1] ?? null);
   const total = $derived(current ? current.screens.length + 2 : 1);
 
   const canSkipForward = $derived(index < facts.length - 1);
   const canSkipBack = $derived(index > 0);
 
-  const cardTransform = $derived.by(() => {
-    if (!dragging) return 'translateY(0)';
-    if (axis === 'x') {
-      const capped = (dx < 0 && !canSkipForward) || (dx > 0 && !canSkipBack) ? dx * 0.25 : dx;
-      const scale = 1 - Math.min(Math.abs(capped) / 4500, 0.04);
-      return `translateX(${capped}px) scale(${scale})`;
+  function slideTransform(pos: 'current' | 'next' | 'prev'): string {
+    if (commit) {
+      const axisFn = commit.axis === 'y' ? 'translateY' : 'translateX';
+      if (pos === 'current') return `${axisFn}(${commit.dir < 0 ? '-100%' : '100%'})`;
+      const incoming = commit.dir < 0 ? 'next' : 'prev';
+      if (pos === incoming) return 'translate(0)';
+      return `${axisFn}(${commit.dir < 0 ? '100%' : '-100%'})`;
     }
-    const capped = (dy < 0 && !canSkipForward) || (dy > 0 && !canSkipBack) ? dy * 0.25 : dy;
-    const scale = 1 - Math.min(Math.abs(capped) / 4500, 0.04);
-    return `translateY(${capped}px) scale(${scale})`;
-  });
+    if (!dragging) {
+      if (pos === 'current') return 'translate(0)';
+      return pos === 'next' ? 'translate(100%)' : 'translate(-100%)';
+    }
+    const capped =
+      ((axis === 'y' ? dy : dx) < 0 && !canSkipForward) ||
+      ((axis === 'y' ? dy : dx) > 0 && !canSkipBack)
+        ? (axis === 'y' ? dy : dx) * 0.25
+        : axis === 'y'
+          ? dy
+          : dx;
+    const axisFn = axis === 'y' ? 'translateY' : 'translateX';
+    if (pos === 'current') return `${axisFn}(${capped}px)`;
+    if (pos === 'next') return `${axisFn}(calc(100% + ${capped}px))`;
+    return `${axisFn}(calc(-100% + ${capped}px))`;
+  }
+
+  function commitSlide(axis: 'x' | 'y', dir: 1 | -1): void {
+    if (commit) return;
+    commit = { axis, dir };
+    setTimeout(() => {
+      if (dir < 0) {
+        index++;
+        void ensureAhead(index);
+      } else {
+        index--;
+      }
+      screenIndex = 0;
+      commit = null;
+    }, 360);
+  }
 
   const counted = new Set<string>();
   $effect(() => {
@@ -82,19 +112,16 @@
   }
 
   function skipForward(): boolean {
-    if (!current || !canSkipForward) return false;
-    index++;
-    screenIndex = 0;
+    if (!current || !canSkipForward || commit) return false;
     playTick();
-    void ensureAhead(index);
+    commitSlide('y', -1);
     return true;
   }
 
   function skipBack(): boolean {
-    if (!canSkipBack) return false;
-    index--;
-    screenIndex = 0;
+    if (!canSkipBack || commit) return false;
     playTick();
+    commitSlide('y', 1);
     return true;
   }
 
@@ -169,6 +196,7 @@
   }
 
   function onTouchStart(e: TouchEvent): void {
+    if (commit) return;
     const t = e.touches[0];
     dragging = true;
     axis = null;
@@ -235,8 +263,11 @@
       return;
     }
     if (usedAxis === 'x') {
-      if (dxEnd < -70 || hVel < -0.6) skipForward();
-      else if (dxEnd > 70 || hVel > 0.6) skipBack();
+      if (dxEnd < -70 || hVel < -0.6) {
+        if (canSkipForward) commitSlide('x', -1);
+      } else if (dxEnd > 70 || hVel > 0.6) {
+        if (canSkipBack) commitSlide('x', 1);
+      }
       return;
     }
     if (d < -70 || velocity < -0.6) skipForward();
@@ -294,13 +325,20 @@
   {#if $feed.loading && !current}
     <Skeleton />
   {:else if current}
-    <div class="under" aria-hidden="true">
-      {#if nextFact}
-        <FactCard fact={nextFact} screenIndex={0} preview />
+    <div class="stage" class:dragging>
+      {#if prevFact}
+        <div class="slide" style:transform={slideTransform('prev')} aria-hidden="true">
+          <FactCard fact={prevFact} screenIndex={0} />
+        </div>
       {/if}
-    </div>
-    <div class="front" class:dragging style:transform={cardTransform}>
-      <FactCard fact={current} {screenIndex} />
+      <div class="slide" style:transform={slideTransform('current')}>
+        <FactCard fact={current} {screenIndex} />
+      </div>
+      {#if nextFact}
+        <div class="slide" style:transform={slideTransform('next')} aria-hidden="true">
+          <FactCard fact={nextFact} screenIndex={0} />
+        </div>
+      {/if}
     </div>
     <ProgressBar segments={total} active={screenIndex} />
     <header class="top">
@@ -329,16 +367,17 @@
     user-select: none;
     -webkit-user-select: none;
   }
-  .under,
-  .front {
+  .stage {
     position: absolute;
     inset: 0;
   }
-  .front {
+  .slide {
+    position: absolute;
+    inset: 0;
     will-change: transform;
-    transition: transform 0.32s var(--ease-spring);
+    transition: transform 0.36s var(--ease-spring);
   }
-  .front.dragging {
+  .stage.dragging .slide {
     transition: none;
   }
   .top {
