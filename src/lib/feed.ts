@@ -134,6 +134,31 @@ function randomBatchSupplier(): Supplier {
   return sup;
 }
 
+function nearbySupplier(c: { lat: number; lon: number }): Supplier {
+  let pages: wiki.NearbyPage[] | null = null;
+  let idx = 0;
+  const sup: Supplier = async () => {
+    if (!pages) {
+      pages = await wiki.getNearbyPages(c.lat, c.lon).catch(() => []);
+      if (pages.length < 8) {
+        const wider = await wiki.getNearbyPages(c.lat, c.lon, 50000).catch(() => []);
+        const ids = new Set(pages.map((p) => p.page.id));
+        pages = pages.concat(wider.filter((p) => !ids.has(p.page.id)));
+      }
+      pages.sort((a, b) => a.dist - b.dist);
+    }
+    while (idx < pages.length) {
+      const p = pages[idx++];
+      if (!p) continue;
+      return { ...p.page };
+    }
+    sup.done = true;
+    return null;
+  };
+  sup.reusable = true;
+  return sup;
+}
+
 function replenish(mode: Mode, topic: Topic | null): void {
   pass++;
   if (mode === 'onthisday' || mode === 'nearby') {
@@ -199,18 +224,7 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
 
   if (mode === 'nearby' && coords) {
     const c = coords;
-    return [
-      async () => {
-        const results = await wiki.getNearby(c.lat, c.lon);
-        const titles = shuffle(results.map((r) => r.title));
-        for (const title of titles) {
-          const raw = await pageSupplier(title)();
-          if (raw) return raw;
-        }
-        return null;
-      },
-      ...shuffle(TOPICS.flatMap((t) => topicSeeds[t.id])).map((title) => pageSupplier(title)),
-    ];
+    return [nearbySupplier(c)];
   }
 
   return shuffle(weightedSeeds()).map(({ title, topic }) => pageSupplier(title, topic));

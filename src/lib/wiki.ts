@@ -204,32 +204,38 @@ export async function findArticleImage(
   return null;
 }
 
-export interface GeoResult {
-  title: string;
+export interface NearbyPage {
+  page: WikiPage;
+  dist: number;
 }
 
-export async function getNearby(
+export async function getNearbyPages(
   lat: number,
   lon: number,
   radius = 10000,
   ttlMs = 3600000,
-): Promise<GeoResult[]> {
-  const data = await fetchJSON<{
-    query?: { geosearch?: { title: string }[] };
-  }>(
+): Promise<NearbyPage[]> {
+  const data = await fetchJSON<{ query?: { pages?: (ApiPage & { dist?: number })[] } }>(
     `${API}?${new URLSearchParams({
       action: 'query',
       format: 'json',
       formatversion: '2',
       origin: '*',
-      list: 'geosearch',
-      gscoord: `${lat}|${lon}`,
-      gsradius: String(radius),
-      gslimit: '40',
+      generator: 'geosearch',
+      ggscoord: `${lat}|${lon}`,
+      ggsradius: String(radius),
+      ggslimit: '50',
+      prop: 'extracts|pageimages|info',
+      explaintext: '1',
+      exsectionformat: 'plain',
+      inprop: 'url',
+      pithumbsize: '1000',
     })}`,
     ttlMs,
   );
-  return (data?.query?.geosearch ?? []).map((g) => ({ title: g.title }));
+  return (data?.query?.pages ?? [])
+    .filter((p) => !p.missing && p.extract && p.extract.length > 400 && p.thumbnail)
+    .map((p) => ({ page: toPage(p), dist: p.dist ?? 0 }));
 }
 
 export async function getRandomTitles(limit = 20): Promise<string[]> {
