@@ -210,7 +210,8 @@
     if (!dragging) return;
     const t = e.touches[0];
     dx = t.clientX - startX;
-    dy = t.clientY - startY;
+    const raw = t.clientY - startY;
+    dy = Math.abs(raw) <= 8 ? 0 : raw > 0 ? raw - 8 : raw + 8;
     const now = performance.now();
     const dt = Math.max(1, now - lastT);
     velocity = (t.clientY - lastY) / dt;
@@ -242,8 +243,8 @@
       }
       return;
     }
-    if (d < -70 || velocity < -0.6) skipForward();
-    else if (d > 70 || velocity > 0.6) skipBack();
+    if (d < -70 || (velocity < -0.6 && d < -20)) skipForward();
+    else if (d > 70 || (velocity > 0.6 && d > 20)) skipBack();
   }
 
   $effect(() => {
@@ -332,6 +333,7 @@
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   .stage {
     position: absolute;
