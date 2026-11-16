@@ -16,30 +16,59 @@
   let screenIndex = $state(0);
   let dy = $state(0);
   let dx = $state(0);
-  let axis: 'x' | 'y' | null = null;
   let dragging = $state(false);
+  let notrans = $state(false);
+  let commit = $state<{ dir: 1 | -1 } | null>(null);
   let bursts = $state<{ id: number; x: number; y: number }[]>([]);
   let likedMap = $state<Record<string, boolean>>({});
 
   const facts = $derived($feed.facts);
   const current = $derived(facts[index] ?? null);
+  const prevFact = $derived(facts[index - 1] ?? null);
   const nextFact = $derived(facts[index + 1] ?? null);
   const total = $derived(current ? current.screens.length + 2 : 1);
 
   const canSkipForward = $derived(index < facts.length - 1);
   const canSkipBack = $derived(index > 0);
 
-  const cardTransform = $derived.by(() => {
-    if (!dragging) return 'translateY(0)';
-    if (axis === 'x') {
-      const capped = (dx < 0 && !canSkipForward) || (dx > 0 && !canSkipBack) ? dx * 0.25 : dx;
-      const scale = 1 - Math.min(Math.abs(capped) / 4500, 0.04);
-      return `translateX(${capped}px) scale(${scale})`;
+  function slideTransform(pos: 'current' | 'next' | 'prev'): string {
+    if (commit) {
+      if (pos === 'current') return `translateY(${commit.dir < 0 ? '-100%' : '100%'})`;
+      const incoming = commit.dir < 0 ? 'next' : 'prev';
+      if (pos === incoming) return 'translate(0)';
+      return pos === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
     }
-    const capped = (dy < 0 && !canSkipForward) || (dy > 0 && !canSkipBack) ? dy * 0.25 : dy;
-    const scale = 1 - Math.min(Math.abs(capped) / 4500, 0.04);
-    return `translateY(${capped}px) scale(${scale})`;
-  });
+    if (!dragging) {
+      if (pos === 'current') return 'translate(0)';
+      return pos === 'next' ? 'translateY(100%)' : 'translateY(-100%)';
+    }
+    const capped =
+      (dy < 0 && !canSkipForward) || (dy > 0 && !canSkipBack) ? dy * 0.25 : dy;
+    if (pos === 'current') return `translateY(${capped}px)`;
+    if (pos === 'next') return `translateY(calc(100% + ${capped}px))`;
+    return `translateY(calc(-100% + ${capped}px))`;
+  }
+
+  function commitSlide(dir: 1 | -1): void {
+    if (commit) return;
+    commit = { dir };
+    setTimeout(() => {
+      notrans = true;
+      if (dir < 0) {
+        index++;
+        void ensureAhead(index);
+      } else {
+        index--;
+      }
+      screenIndex = 0;
+      commit = null;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          notrans = false;
+        });
+      });
+    }, 360);
+  }
 
   const counted = new Set<string>();
   $effect(() => {
@@ -72,7 +101,7 @@
   });
 
   function advance(): void {
-    if (!current) return;
+    if (!current || commit) return;
     if (screenIndex < total - 1) {
       screenIndex++;
       playTick();
@@ -82,19 +111,16 @@
   }
 
   function skipForward(): boolean {
-    if (!current || !canSkipForward) return false;
-    index++;
-    screenIndex = 0;
+    if (!current || !canSkipForward || commit) return false;
     playTick();
-    void ensureAhead(index);
+    commitSlide(-1);
     return true;
   }
 
   function skipBack(): boolean {
-    if (!canSkipBack) return false;
-    index--;
-    screenIndex = 0;
+    if (!canSkipBack || commit) return false;
     playTick();
+    commitSlide(1);
     return true;
   }
 
@@ -138,11 +164,9 @@
 
   let startY = 0;
   let startX = 0;
-  let lastX = 0;
   let lastY = 0;
   let lastT = 0;
   let velocity = 0;
-  let hVel = 0;
   let startT = 0;
   let curX = 0;
   let curY = 0;
@@ -152,6 +176,7 @@
   let tapTimer: ReturnType<typeof setTimeout> | null = null;
   let tapScheduledScreen = 0;
   let lastTouchEnd = 0;
+  let onInteractive = false;
 
   function scheduleTap(): void {
     if (tapTimer) clearTimeout(tapTimer);
@@ -169,43 +194,31 @@
   }
 
   function onTouchStart(e: TouchEvent): void {
+    if (commit) return;
     const t = e.touches[0];
+    onInteractive = !!(e.target as HTMLElement).closest('button, a, input, label');
     dragging = true;
-    axis = null;
     startY = lastY = t.clientY;
-    startX = lastX = t.clientX;
+    startX = t.clientX;
     dx = 0;
     dy = 0;
     curX = t.clientX;
     curY = t.clientY;
     startT = lastT = performance.now();
     velocity = 0;
-    hVel = 0;
   }
 
   function onTouchMove(e: TouchEvent): void {
     if (!dragging) return;
     const t = e.touches[0];
     dx = t.clientX - startX;
-    dy = t.clientY - startY;
-    if (!axis) {
-      if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-        axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      }
-    }
-    if (axis === 'y') {
-      const now = performance.now();
-      const dt = Math.max(1, now - lastT);
-      velocity = (t.clientY - lastY) / dt;
-      lastY = t.clientY;
-      lastT = now;
-    } else if (axis === 'x') {
-      const now = performance.now();
-      const dt = Math.max(1, now - lastT);
-      hVel = (t.clientX - lastX) / dt;
-      lastX = t.clientX;
-      lastT = now;
-    }
+    const raw = t.clientY - startY;
+    dy = Math.abs(raw) <= 8 ? 0 : raw > 0 ? raw - 8 : raw + 8;
+    const now = performance.now();
+    const dt = Math.max(1, now - lastT);
+    velocity = (t.clientY - lastY) / dt;
+    lastY = t.clientY;
+    lastT = now;
   }
 
   function onTouchEnd(): void {
@@ -213,13 +226,12 @@
     dragging = false;
     const d = dy;
     const dxEnd = dx;
-    const usedAxis = axis;
-    axis = null;
     dy = 0;
     dx = 0;
     const now = performance.now();
     lastTouchEnd = now;
     if (Math.abs(d) < 10 && Math.abs(dxEnd) < 10 && now - startT < 260) {
+      if (onInteractive) return;
       if (now - prevTapT < 340 && Math.abs(curX - prevTapX) < 70) {
         likeCurrent(curX, curY);
         prevTapT = 0;
@@ -234,13 +246,8 @@
       }
       return;
     }
-    if (usedAxis === 'x') {
-      if (dxEnd < -70 || hVel < -0.6) skipForward();
-      else if (dxEnd > 70 || hVel > 0.6) skipBack();
-      return;
-    }
-    if (d < -70 || velocity < -0.6) skipForward();
-    else if (d > 70 || velocity > 0.6) skipBack();
+    if (d < -70 || (velocity < -0.6 && d < -20)) skipForward();
+    else if (d > 70 || (velocity > 0.6 && d > 20)) skipBack();
   }
 
   $effect(() => {
@@ -261,12 +268,6 @@
         e.preventDefault();
         skipForward();
       } else if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'k') {
-        e.preventDefault();
-        skipBack();
-      } else if (e.key === 'ArrowRight' || e.key === 'l') {
-        e.preventDefault();
-        skipForward();
-      } else if (e.key === 'ArrowLeft' || e.key === 'h') {
         e.preventDefault();
         skipBack();
       }
@@ -294,13 +295,20 @@
   {#if $feed.loading && !current}
     <Skeleton />
   {:else if current}
-    <div class="under" aria-hidden="true">
-      {#if nextFact}
-        <FactCard fact={nextFact} screenIndex={0} preview />
+    <div class="stage" class:dragging class:notrans>
+      {#if prevFact}
+        <div class="slide" style:transform={slideTransform('prev')} aria-hidden="true">
+          <FactCard fact={prevFact} screenIndex={0} />
+        </div>
       {/if}
-    </div>
-    <div class="front" class:dragging style:transform={cardTransform}>
-      <FactCard fact={current} {screenIndex} />
+      <div class="slide" style:transform={slideTransform('current')}>
+        <FactCard fact={current} {screenIndex} />
+      </div>
+      {#if nextFact}
+        <div class="slide" style:transform={slideTransform('next')} aria-hidden="true">
+          <FactCard fact={nextFact} screenIndex={0} />
+        </div>
+      {/if}
     </div>
     <ProgressBar segments={total} active={screenIndex} />
     <header class="top">
@@ -328,17 +336,20 @@
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
-  .under,
-  .front {
+  .stage {
     position: absolute;
     inset: 0;
   }
-  .front {
+  .slide {
+    position: absolute;
+    inset: 0;
     will-change: transform;
-    transition: transform 0.32s var(--ease-spring);
+    transition: transform 0.36s var(--ease-spring);
   }
-  .front.dragging {
+  .stage.dragging .slide,
+  .stage.notrans .slide {
     transition: none;
   }
   .top {
