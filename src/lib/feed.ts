@@ -63,7 +63,7 @@ function restSupplier(p: wiki.RestPage, fallbackTopic?: Topic): Supplier {
 function onThisDaySupplier(): Supplier {
   let pages: wiki.RestPage[] | null = null;
   let idx = 0;
-  const sup = async () => {
+  const sup: Supplier = async () => {
     if (!pages) {
       const now = new Date();
       const mm = String(now.getMonth() + 1).padStart(2, '0');
