@@ -38,7 +38,8 @@ src/
                  current fact plus the next 3 are always ready (images
                  preloaded); rapid scrolling cannot stack parallel fetches.
     storage.ts   localStorage only: likes, history, seen ids, daily streak,
-                 weekly counter, settings. Nothing leaves the device.
+                 weekly counter, settings (sound, auto-advance, reading
+                 speed). Nothing leaves the device.
                  Legacy `pepite.*` and `factflow.*` keys are migrated automatically.
     share.ts     Canvas-rendered shareable card (title + hook + image),
                  shared via the Web Share API with clipboard fallback.
@@ -51,8 +52,10 @@ src/
                  wheel, keyboard), horizontal swipe to skip a fact,
                  double-tap like with heart burst, progress bar,
                  preloading.
-    FactCard.svelte  Hook / story / payoff screens, Ken Burns background,
-                 rare-frame on occasional facts.
+    FactCard.svelte  Hook / story / payoff screens rendered as short
+                 caption "beats" (TikTok-style subtitles, last 3 lines
+                 visible with pop-in), Ken Burns background, rare-frame
+                 on occasional facts.
     ModeSwitcher / StatsSheet / ProgressBar / Toasts / Skeleton
 ```
 

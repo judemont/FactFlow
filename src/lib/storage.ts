@@ -1,3 +1,4 @@
+import { writable } from 'svelte/store';
 import { dayKey, lastNDays } from './utils';
 import type { Fact } from './types';
 
@@ -192,12 +193,32 @@ export function recordView(id: string): string[] {
   return milestones;
 }
 
+export interface Settings {
+  sound: boolean;
+  autoplay: boolean;
+  wpm: number;
+}
+
+const DEFAULT_SETTINGS: Settings = { sound: false, autoplay: true, wpm: 220 };
+
+export function getSettings(): Settings {
+  return { ...DEFAULT_SETTINGS, ...read<Partial<Settings>>(KEYS.settings, {}) };
+}
+
+export const settings = writable<Settings>(getSettings());
+
+export function updateSettings(patch: Partial<Settings>): void {
+  const next = { ...getSettings(), ...patch };
+  write(KEYS.settings, next);
+  settings.set(next);
+}
+
 export function soundEnabled(): boolean {
-  return read<{ sound: boolean }>(KEYS.settings, { sound: false }).sound;
+  return getSettings().sound;
 }
 
 export function setSound(on: boolean): void {
-  write(KEYS.settings, { sound: on });
+  updateSettings({ sound: on });
 }
 
 export function clearAllData(): void {

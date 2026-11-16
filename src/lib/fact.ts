@@ -195,6 +195,30 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+export function splitBeats(text: string): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const beats: string[] = [];
+  let current: string[] = [];
+  for (const word of words) {
+    current.push(word);
+    const pauseAfter = /[,;:!?—–.]$/.test(word);
+    const limit = pauseAfter ? 3 : 5;
+    if (current.length >= limit) {
+      beats.push(current.join(' '));
+      current = [];
+    }
+  }
+  if (current.length) {
+    if (current.length === 1 && beats.length > 0) {
+      const last = beats[beats.length - 1];
+      if (last !== undefined) beats[beats.length - 1] = `${last} ${current[0]}`;
+    } else {
+      beats.push(current.join(' '));
+    }
+  }
+  return beats;
+}
+
 export function buildFact(a: RawArticle): Fact | null {
   const text = cleanExtract(a.extract);
   if (text.length < 220) return null;

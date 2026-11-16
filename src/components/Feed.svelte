@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { feed, setMode, ensureAhead, onFactShown, openShared } from '../lib/feed';
-  import { toggleLike, isLiked } from '../lib/storage';
+  import { splitBeats } from '../lib/fact';
+  import { toggleLike, isLiked, settings } from '../lib/storage';
   import { playTick, playPop, haptic } from '../lib/sound';
   import { showToast } from '../lib/toast';
   import FactCard from './FactCard.svelte';
@@ -14,6 +15,7 @@
 
   let index = $state(0);
   let screenIndex = $state(0);
+  let beatIndex = $state(1);
   let dy = $state(0);
   let dx = $state(0);
   let axis: 'x' | 'y' | null = null;
@@ -23,6 +25,12 @@
 
   const facts = $derived($feed.facts);
   const current = $derived(facts[index] ?? null);
+  const beats = $derived.by(() => {
+    if (!current) return [];
+    if (screenIndex === 0) return splitBeats(current.hook);
+    if (screenIndex >= current.screens.length + 1) return [];
+    return splitBeats(current.screens[screenIndex - 1] ?? '');
+  });
   const nextFact = $derived(facts[index + 1] ?? null);
   const total = $derived(current ? current.screens.length + 2 : 1);
   const atEnd = $derived(
@@ -43,6 +51,21 @@
     const capped = (atEnd && dy < 0) || (atStart && dy > 0) ? dy * 0.25 : dy;
     const scale = 1 - Math.min(Math.abs(capped) / 4500, 0.04);
     return `translateY(${capped}px) scale(${scale})`;
+  });
+
+  $effect(() => {
+    if (!$settings.autoplay || dragging || !beats.length) return;
+    if (beatIndex < beats.length) {
+      const text = beats[beatIndex] ?? '';
+      const words = text.split(/\s+/).filter(Boolean).length;
+      const ms = Math.max(450, Math.round((words * 60000) / $settings.wpm) + 200);
+      const t = setTimeout(() => {
+        beatIndex++;
+      }, ms);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => advance(false), 700);
+    return () => clearTimeout(t);
   });
 
   const counted = new Set<string>();
@@ -75,11 +98,12 @@
     }
   });
 
-  function advance(): void {
+  function advance(manual = true): void {
     if (!current) return;
     if (screenIndex < total - 1) {
       screenIndex++;
-      playTick();
+      beatIndex = 1;
+      if (manual) playTick();
     } else if (!skipForward()) {
       void ensureAhead(index);
     }
@@ -88,6 +112,7 @@
   function back(): void {
     if (screenIndex > 0) {
       screenIndex--;
+      beatIndex = 1;
       playTick();
     } else {
       skipBack();
@@ -98,6 +123,7 @@
     if (!current || !canSkipForward) return false;
     index++;
     screenIndex = 0;
+    beatIndex = 1;
     playTick();
     void ensureAhead(index);
     return true;
@@ -107,6 +133,7 @@
     if (!canSkipBack) return false;
     index--;
     screenIndex = 0;
+    beatIndex = 1;
     playTick();
     return true;
   }
@@ -114,6 +141,7 @@
   function resetPosition(): void {
     index = 0;
     screenIndex = 0;
+    beatIndex = 1;
     dy = 0;
   }
 
@@ -128,6 +156,7 @@
     if (ok) {
       index = 0;
       screenIndex = 0;
+      beatIndex = 1;
     }
   }
 
@@ -162,6 +191,33 @@
   let prevTapT = 0;
   let prevTapX = 0;
   let wheelLock = 0;
+  let tapTimer: ReturnType<typeof setTimeout> | null = null;
+  let tapScheduledBeat = 0;
+  let lastTouchEnd = 0;
+
+  function handleTap(): void {
+    if (!beats.length) return;
+    if (beatIndex < beats.length) {
+      beatIndex++;
+      return;
+    }
+    if (!$settings.autoplay) advance();
+  }
+
+  function scheduleTap(): void {
+    if (tapTimer) clearTimeout(tapTimer);
+    tapScheduledBeat = beatIndex;
+    tapTimer = setTimeout(() => {
+      tapTimer = null;
+      if (beatIndex === tapScheduledBeat) handleTap();
+    }, 320);
+  }
+
+  function onClick(e: MouseEvent): void {
+    if (performance.now() - lastTouchEnd < 500) return;
+    if ((e.target as HTMLElement).closest('button, a, input, label')) return;
+    scheduleTap();
+  }
 
   function onTouchStart(e: TouchEvent): void {
     const t = e.touches[0];
@@ -213,13 +269,19 @@
     dy = 0;
     dx = 0;
     const now = performance.now();
+    lastTouchEnd = now;
     if (Math.abs(d) < 10 && Math.abs(dxEnd) < 10 && now - startT < 260) {
       if (now - prevTapT < 340 && Math.abs(curX - prevTapX) < 70) {
         likeCurrent(curX, curY);
         prevTapT = 0;
+        if (tapTimer) {
+          clearTimeout(tapTimer);
+          tapTimer = null;
+        }
       } else {
         prevTapT = now;
         prevTapX = curX;
+        scheduleTap();
       }
       return;
     }
@@ -266,7 +328,17 @@
   });
 </script>
 
-<div class="feed" role="region" aria-label="Fact feed" ontouchstart={onTouchStart} ontouchmove={onTouchMove} ontouchend={onTouchEnd}>
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+<!-- Keyboard advance is handled by the window-level keydown listener below. -->
+<div
+  class="feed"
+  role="region"
+  aria-label="Fact feed"
+  onclick={onClick}
+  ontouchstart={onTouchStart}
+  ontouchmove={onTouchMove}
+  ontouchend={onTouchEnd}
+>
   {#if $feed.loading && !current}
     <Skeleton />
   {:else if current}
@@ -276,7 +348,7 @@
       {/if}
     </div>
     <div class="front" class:dragging style:transform={cardTransform}>
-      <FactCard fact={current} {screenIndex} />
+      <FactCard fact={current} {screenIndex} {beatIndex} />
     </div>
     <ProgressBar segments={total} active={screenIndex} />
     <header class="top">

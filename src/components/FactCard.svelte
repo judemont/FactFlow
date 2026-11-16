@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Fact } from '../lib/types';
+  import { splitBeats } from '../lib/fact';
   import { shareFact } from '../lib/share';
   import { showToast } from '../lib/toast';
   import { playPop } from '../lib/sound';
@@ -7,16 +8,24 @@
   let {
     fact,
     screenIndex,
+    beatIndex = Infinity,
     preview = false,
   }: {
     fact: Fact;
     screenIndex: number;
+    beatIndex?: number;
     preview?: boolean;
   } = $props();
 
   const isHook = $derived(screenIndex === 0);
   const isPayoff = $derived(screenIndex >= fact.screens.length + 1);
   const story = $derived(fact.screens[screenIndex - 1] ?? '');
+  const beats = $derived(splitBeats(isHook ? fact.hook : story));
+  const visible = $derived(
+    beatIndex >= beats.length
+      ? beats
+      : beats.slice(Math.max(0, beatIndex - 3), beatIndex),
+  );
 
   async function share(): Promise<void> {
     playPop();
@@ -40,7 +49,9 @@
     {#if isHook}
       <div class="hook-block">
         <span class="topic">{fact.title}</span>
-        <h1 class="hook">{fact.hook}</h1>
+        <h1 class="hook">
+          {#each visible as beat (beat)}<span class="beat">{beat}</span>{/each}
+        </h1>
       </div>
       <div class="swipe-hint" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -64,7 +75,9 @@
         </div>
       </div>
     {:else}
-      <p class="story">{story}</p>
+      <p class="story">
+        {#each visible as beat (beat)}<span class="beat">{beat}</span>{/each}
+      </p>
     {/if}
   </div>
 </article>
@@ -150,6 +163,33 @@
     letter-spacing: -0.025em;
     text-wrap: balance;
     text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
+  }
+  .beat {
+    display: block;
+    --beat-opacity: 1;
+    opacity: var(--beat-opacity);
+    animation: beat-in 0.22s var(--ease-spring) both;
+  }
+  .beat:nth-last-child(2) {
+    --beat-opacity: 0.55;
+  }
+  .beat:nth-last-child(3) {
+    --beat-opacity: 0.3;
+  }
+  @keyframes beat-in {
+    from {
+      transform: scale(0.85) translateY(8px);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: var(--beat-opacity);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .beat {
+      animation: none;
+    }
   }
   .swipe-hint {
     position: absolute;

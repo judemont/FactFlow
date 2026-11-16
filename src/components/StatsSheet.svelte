@@ -2,8 +2,8 @@
   import {
     getStats,
     getLikedFacts,
-    soundEnabled,
-    setSound,
+    settings,
+    updateSettings,
     clearAllData,
     toggleLike,
     type Stats,
@@ -15,7 +15,6 @@
 
   let open = $state(false);
   let stats = $state<Stats>(getStats());
-  let sound = $state(soundEnabled());
   let liked = $state<LikedEntry[]>([]);
 
   $effect(() => {
@@ -45,9 +44,8 @@
   }
 
   function toggleSound(): void {
-    sound = !sound;
-    setSound(sound);
-    if (sound) showToast('Sound on');
+    updateSettings({ sound: !$settings.sound });
+    if (!$settings.sound) showToast('Sound on');
   }
 
   function clear(): void {
@@ -117,10 +115,35 @@
         {/if}
       </div>
       <div class="settings">
-        <button class="setting" onclick={toggleSound} aria-pressed={sound}>
+        <button class="setting" onclick={toggleSound} aria-pressed={$settings.sound}>
           <span>Sound</span>
-          <span class="toggle" class:on={sound}><span class="knob"></span></span>
+          <span class="toggle" class:on={$settings.sound}><span class="knob"></span></span>
         </button>
+        <button
+          class="setting"
+          onclick={() => updateSettings({ autoplay: !$settings.autoplay })}
+          aria-pressed={$settings.autoplay}
+        >
+          <span>Auto-advance</span>
+          <span class="toggle" class:on={$settings.autoplay}><span class="knob"></span></span>
+        </button>
+        {#if $settings.autoplay}
+          <label class="setting speed">
+            <span>Reading speed</span>
+            <span class="speed-controls">
+              <input
+                type="range"
+                min="120"
+                max="400"
+                step="20"
+                value={$settings.wpm}
+                oninput={(e) => updateSettings({ wpm: e.currentTarget.valueAsNumber })}
+                aria-label="Reading speed in words per minute"
+              />
+              <span class="speed-value">{$settings.wpm}<small> wpm</small></span>
+            </span>
+          </label>
+        {/if}
         <button class="setting danger" onclick={clear}>
           <span>Clear local data</span>
         </button>
@@ -358,6 +381,25 @@
   }
   .toggle.on .knob {
     transform: translateX(18px);
+  }
+  .speed-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .speed-value {
+    font-size: 0.8rem;
+    color: var(--muted);
+    min-width: 56px;
+    text-align: right;
+  }
+  .speed-value small {
+    font-size: 0.65rem;
+    color: var(--faint);
+  }
+  input[type='range'] {
+    accent-color: var(--accent);
+    width: 110px;
   }
   .privacy {
     margin: 16px 0 0;
