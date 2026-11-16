@@ -1,22 +1,22 @@
 <script lang="ts">
-  import type { Gem } from '../lib/types';
-  import { shareGem } from '../lib/share';
+  import type { Fact } from '../lib/types';
+  import { shareFact } from '../lib/share';
   import { showToast } from '../lib/toast';
   import { playPop } from '../lib/sound';
 
   let {
-    gem,
+    fact,
     liked,
     onlike,
   }: {
-    gem: Gem;
+    fact: Fact;
     liked: boolean;
     onlike: (x?: number, y?: number) => void;
   } = $props();
 
   async function share(): Promise<void> {
     playPop();
-    const result = await shareGem(gem);
+    const result = await shareFact(fact);
     if (result === 'copied') showToast('Link copied');
     else if (result === 'failed') showToast('Sharing unavailable');
   }
@@ -34,7 +34,7 @@
       <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
     </svg>
   </button>
-  <a class="act" href={gem.articleUrl} target="_blank" rel="noopener noreferrer" aria-label="Read the full article on Wikipedia">
+  <a class="act" href={fact.articleUrl} target="_blank" rel="noopener noreferrer" aria-label="Read the full article on Wikipedia">
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
     </svg>

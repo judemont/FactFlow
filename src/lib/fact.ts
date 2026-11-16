@@ -1,4 +1,4 @@
-import type { Gem, Topic } from './types';
+import type { Fact, Topic } from './types';
 import { hashString } from './utils';
 import { guessTopic } from './wiki';
 
@@ -195,7 +195,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function buildGem(a: RawArticle): Gem | null {
+export function buildFact(a: RawArticle): Fact | null {
   const text = cleanExtract(a.extract);
   if (text.length < 220) return null;
 
@@ -214,7 +214,7 @@ export function buildGem(a: RawArticle): Gem | null {
     )[0] ?? scored[0];
 
   if (best.score < HOOK_MIN) {
-    console.info(`[pepite] weak hook for "${a.title}" (score ${best.score.toFixed(1)})`);
+    console.info(`[factflow] weak hook for "${a.title}" (score ${best.score.toFixed(1)})`);
   }
 
   const h = hashString(`${a.id}:${a.title}`);

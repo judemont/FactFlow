@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     getStats,
-    getLikedGems,
+    getLikedFacts,
     soundEnabled,
     setSound,
     clearAllData,
@@ -10,6 +10,8 @@
     type LikedEntry,
   } from '../lib/storage';
   import { showToast } from '../lib/toast';
+
+  let { onopen }: { onopen: (id: string) => void } = $props();
 
   let open = $state(false);
   let stats = $state<Stats>(getStats());
@@ -27,14 +29,19 @@
     open = !open;
     if (open) {
       stats = getStats();
-      liked = getLikedGems();
+      liked = getLikedFacts();
     }
   }
 
   function removeLike(entry: LikedEntry): void {
-    toggleLike(entry.gem);
-    liked = liked.filter((e) => e.gem.id !== entry.gem.id);
+    toggleLike(entry.fact);
+    liked = liked.filter((e) => e.fact.id !== entry.fact.id);
     stats = getStats();
+  }
+
+  function openFact(id: string): void {
+    open = false;
+    onopen(id);
   }
 
   function toggleSound(): void {
@@ -77,7 +84,7 @@
           <span class="label">liked</span>
         </div>
       </div>
-      <div class="week" aria-label="Gems learned per day, last 7 days">
+      <div class="week" aria-label="Facts learned per day, last 7 days">
         {#each stats.week as d (d.day)}
           <div class="bar-wrap" title={d.day}>
             <div
@@ -87,26 +94,26 @@
           </div>
         {/each}
       </div>
-      <div class="liked" aria-label="Liked gems">
-        <span class="section-title">Liked gems</span>
+      <div class="liked" aria-label="Liked facts">
+        <span class="section-title">Liked facts</span>
         {#if liked.length}
           <div class="liked-list">
-            {#each liked as e (e.gem.id)}
+            {#each liked as e (e.fact.id)}
               <div class="liked-row">
                 <div class="liked-info">
-                  <a class="liked-title" href={e.gem.articleUrl} target="_blank" rel="noopener noreferrer">
-                    {e.gem.title}
-                  </a>
-                  <span class="liked-hook">{e.gem.hook}</span>
+                  <button class="liked-title" onclick={() => openFact(e.fact.id)}>
+                    {e.fact.title}
+                  </button>
+                  <span class="liked-hook">{e.fact.hook}</span>
+                  <button class="unlike" aria-label={`Remove ${e.fact.title} from likes`} onclick={() => removeLike(e)}>
+                    ♥ Unlike
+                  </button>
                 </div>
-                <button class="unlike" aria-label={`Remove ${e.gem.title} from likes`} onclick={() => removeLike(e)}>
-                  ♥
-                </button>
               </div>
             {/each}
           </div>
         {:else}
-          <p class="empty">No likes yet — double-tap a gem you enjoy.</p>
+          <p class="empty">No likes yet — double-tap a fact you enjoy.</p>
         {/if}
       </div>
       <div class="settings">
@@ -261,10 +268,11 @@
     font-size: 0.92rem;
     font-weight: 700;
     color: var(--text);
-    text-decoration: none;
+    text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
   }
   .liked-title:hover {
     text-decoration: underline;
@@ -277,9 +285,12 @@
     text-overflow: ellipsis;
   }
   .unlike {
+    align-self: flex-start;
     color: var(--accent);
-    font-size: 1.1rem;
-    padding: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    margin: 2px 0 0 -8px;
     border-radius: 999px;
   }
   .unlike:active {

@@ -1,16 +1,53 @@
 import { dayKey, lastNDays } from './utils';
-import type { Gem } from './types';
+import type { Fact } from './types';
 
 const KEYS = {
-  likes: 'pepite.likes',
-  history: 'pepite.history',
-  streak: 'pepite.streak',
-  weekly: 'pepite.weekly',
-  settings: 'pepite.settings',
-  seen: 'pepite.seen',
-  likeTopics: 'pepite.likeTopics',
-  likedGems: 'pepite.likedGems',
+  likes: 'factflow.likes',
+  history: 'factflow.history',
+  streak: 'factflow.streak',
+  weekly: 'factflow.weekly',
+  settings: 'factflow.settings',
+  seen: 'factflow.seen',
+  likeTopics: 'factflow.likeTopics',
+  likedFacts: 'factflow.likedFacts',
 } as const;
+
+const LEGACY_KEYS: [oldKey: string, newKey: string][] = [
+  ['pepite.likes', KEYS.likes],
+  ['pepite.history', KEYS.history],
+  ['pepite.streak', KEYS.streak],
+  ['pepite.weekly', KEYS.weekly],
+  ['pepite.settings', KEYS.settings],
+  ['pepite.seen', KEYS.seen],
+  ['pepite.likeTopics', KEYS.likeTopics],
+  ['pepite.likedGems', KEYS.likedFacts],
+];
+
+function migrateLegacy(): void {
+  try {
+    for (const [oldKey, newKey] of LEGACY_KEYS) {
+      const legacy = localStorage.getItem(oldKey);
+      if (legacy === null) continue;
+      if (localStorage.getItem(newKey) === null) {
+        if (newKey === KEYS.likedFacts) {
+          const entries = JSON.parse(legacy) as { fact?: unknown; day: string }[];
+          const converted = entries.map((e) => ({
+            fact: (e as { fact?: unknown; gem?: unknown }).fact ?? (e as { gem?: unknown }).gem,
+            day: e.day,
+          }));
+          localStorage.setItem(newKey, JSON.stringify(converted));
+        } else {
+          localStorage.setItem(newKey, legacy);
+        }
+      }
+      localStorage.removeItem(oldKey);
+    }
+  } catch {
+    return;
+  }
+}
+
+migrateLegacy();
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -66,36 +103,36 @@ export function isLiked(id: string): boolean {
 }
 
 export interface LikedEntry {
-  gem: Gem;
+  fact: Fact;
   day: string;
 }
 
-export function toggleLike(gem: Gem): boolean {
+export function toggleLike(fact: Fact): boolean {
   const likes = read<string[]>(KEYS.likes, []);
-  const idx = likes.indexOf(gem.id);
+  const idx = likes.indexOf(fact.id);
   if (idx >= 0) likes.splice(idx, 1);
-  else likes.push(gem.id);
+  else likes.push(fact.id);
   write(KEYS.likes, likes);
 
   const counts = read<Record<string, number>>(KEYS.likeTopics, {});
-  counts[gem.topic] = Math.max(0, (counts[gem.topic] ?? 0) + (idx < 0 ? 1 : -1));
+  counts[fact.topic] = Math.max(0, (counts[fact.topic] ?? 0) + (idx < 0 ? 1 : -1));
   write(KEYS.likeTopics, counts);
 
-  const saved = read<LikedEntry[]>(KEYS.likedGems, []);
+  const saved = read<LikedEntry[]>(KEYS.likedFacts, []);
   if (idx < 0) {
-    saved.unshift({ gem, day: dayKey() });
+    saved.unshift({ fact, day: dayKey() });
   } else {
-    const keep = saved.filter((e) => e.gem.id !== gem.id);
+    const keep = saved.filter((e) => e.fact.id !== fact.id);
     saved.length = 0;
     saved.push(...keep);
   }
-  write(KEYS.likedGems, saved.slice(0, 200));
+  write(KEYS.likedFacts, saved.slice(0, 200));
 
   return idx < 0;
 }
 
-export function getLikedGems(): LikedEntry[] {
-  return read<LikedEntry[]>(KEYS.likedGems, []);
+export function getLikedFacts(): LikedEntry[] {
+  return read<LikedEntry[]>(KEYS.likedFacts, []);
 }
 
 export function getLikeTopicCounts(): Record<string, number> {
@@ -141,7 +178,7 @@ export function recordView(id: string): string[] {
 
   const milestones: string[] = [];
   const todayCount = weekly[today] ?? 0;
-  if (todayCount === 10) milestones.push('10 gems learned today 🔥');
+  if (todayCount === 10) milestones.push('10 facts learned today 🔥');
   if (streak.count === 7) milestones.push('7-day streak 🔥');
   if (streak.count === 30) milestones.push('30-day streak. Unstoppable 🏆');
   return milestones;
@@ -162,7 +199,8 @@ export function clearAllData(): void {
     }
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
-      if (key?.startsWith('pepite:cache:')) localStorage.removeItem(key);
+      if (key && (key.startsWith('factflow:cache:') || key.startsWith('pepite')))
+        localStorage.removeItem(key);
     }
   } catch {
     return;

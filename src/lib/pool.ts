@@ -1,4 +1,4 @@
-import type { Gem, Topic } from './types';
+import type { Fact, Topic } from './types';
 
 export const TOPICS: { id: Topic; label: string; emoji: string }[] = [
   { id: 'science', label: 'Science', emoji: '🧪' },
@@ -59,7 +59,7 @@ export const topicSeeds: Record<Topic, string[]> = {
   ],
 };
 
-export const curatedGems: Gem[] = [
+export const curatedFacts: Fact[] = [
   {
     id: 'curated-dancing-plague',
     title: 'Dancing plague of 1518',
@@ -244,6 +244,6 @@ export const curatedGems: Gem[] = [
   },
 ];
 
-export function fallbackGems(): Gem[] {
-  return curatedGems.map((g) => ({ ...g }));
+export function fallbackFacts(): Fact[] {
+  return curatedFacts.map((g) => ({ ...g }));
 }

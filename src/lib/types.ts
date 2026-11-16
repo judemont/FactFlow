@@ -9,7 +9,7 @@ export type Topic =
 
 export type Mode = 'foryou' | 'onthisday' | 'topics' | 'nearby';
 
-export interface Gem {
+export interface Fact {
   id: string;
   title: string;
   hook: string;

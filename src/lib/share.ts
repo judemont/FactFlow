@@ -1,4 +1,4 @@
-import type { Gem } from './types';
+import type { Fact } from './types';
 
 const W = 1080;
 const H = 1620;
@@ -39,12 +39,12 @@ function wrapText(
   return lines;
 }
 
-export function gemUrl(gem: Gem): string {
+export function factUrl(fact: Fact): string {
   const base = `${window.location.origin}${window.location.pathname}`;
-  return `${base}?gem=${encodeURIComponent(gem.id)}`;
+  return `${base}?fact=${encodeURIComponent(fact.id)}`;
 }
 
-export async function renderCard(gem: Gem): Promise<Blob | null> {
+export async function renderCard(fact: Fact): Promise<Blob | null> {
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -57,8 +57,8 @@ export async function renderCard(gem: Gem): Promise<Blob | null> {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  if (gem.image) {
-    const img = await loadImage(gem.image);
+  if (fact.image) {
+    const img = await loadImage(fact.image);
     if (img) {
       const scale = Math.max(W / img.width, H * 0.62 / img.height);
       const w = img.width * scale;
@@ -74,11 +74,11 @@ export async function renderCard(gem: Gem): Promise<Blob | null> {
 
   ctx.fillStyle = '#ffb454';
   ctx.font = '700 34px system-ui, sans-serif';
-  ctx.fillText('PÉPITE', 72, 96);
+  ctx.fillText('FACTFLOW', 72, 96);
 
   ctx.fillStyle = '#fafafa';
   ctx.font = '800 76px system-ui, sans-serif';
-  const titleLines = wrapText(ctx, gem.title, W - 144, 3);
+  const titleLines = wrapText(ctx, fact.title, W - 144, 3);
   let y = H * 0.72;
   for (const line of titleLines) {
     ctx.fillText(line, 72, y);
@@ -87,7 +87,7 @@ export async function renderCard(gem: Gem): Promise<Blob | null> {
 
   ctx.fillStyle = 'rgba(250,250,250,0.78)';
   ctx.font = '400 40px system-ui, sans-serif';
-  const hookLines = wrapText(ctx, gem.hook, W - 144, 4);
+  const hookLines = wrapText(ctx, fact.hook, W - 144, 4);
   y += 24;
   for (const line of hookLines) {
     ctx.fillText(line, 72, y);
@@ -96,7 +96,7 @@ export async function renderCard(gem: Gem): Promise<Blob | null> {
 
   ctx.fillStyle = 'rgba(250,250,250,0.45)';
   ctx.font = '400 32px system-ui, sans-serif';
-  const link = gemUrl(gem);
+  const link = factUrl(fact);
   ctx.fillText(link.length > 64 ? `${link.slice(0, 61)}…` : link, 72, H - 72);
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
@@ -104,24 +104,24 @@ export async function renderCard(gem: Gem): Promise<Blob | null> {
 
 export type ShareResult = 'shared' | 'copied' | 'failed';
 
-export async function shareGem(gem: Gem): Promise<ShareResult> {
-  const url = gemUrl(gem);
+export async function shareFact(fact: Fact): Promise<ShareResult> {
+  const url = factUrl(fact);
   if (typeof navigator.share === 'function') {
     try {
-      const blob = await renderCard(gem);
+      const blob = await renderCard(fact);
       if (blob && typeof navigator.canShare === 'function') {
-        const file = new File([blob], 'pepite.png', { type: 'image/png' });
+        const file = new File([blob], 'factflow.png', { type: 'image/png' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: gem.title,
-            text: gem.hook,
+            title: fact.title,
+            text: fact.hook,
             url,
           });
           return 'shared';
         }
       }
-      await navigator.share({ title: gem.title, text: gem.hook, url });
+      await navigator.share({ title: fact.title, text: fact.hook, url });
       return 'shared';
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return 'failed';

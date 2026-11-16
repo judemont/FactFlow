@@ -1,6 +1,6 @@
-# Pépite
+# FactFlow
 
-A TikTok-style vertical feed where every "video" is a gem extracted from a high-quality English Wikipedia article. Hook first, story after — learning that feels like a social feed.
+A TikTok-style vertical feed where every "video" is a fact extracted from a high-quality English Wikipedia article. Hook first, story after — learning that feels like a social feed.
 
 ## Setup
 
@@ -20,8 +20,8 @@ src/
                  geosearch) with in-memory + localStorage caching (TTL),
                  retry with backoff, and stale-cache fallback on failure.
                  Articles without a lead image get one via an imageinfo
-                 lookup; gems without any usable image are skipped.
-    gem.ts       The gem pipeline: cleans the extract (headings, references,
+                 lookup; facts without any usable image are skipped.
+    fact.ts      The fact pipeline: cleans the extract (headings, references,
                  parentheticals, bibliography junk), scores every sentence
                  for surprise (years, numbers, superlatives, striking words,
                  curiosity markers; definition sentences and technical junk
@@ -30,23 +30,25 @@ src/
                  a curiosity gap (the removed clause becomes the reveal on
                  the next screen). The rest is chunked into 3-6 story
                  screens ending on the highest-scoring remaining "twist"
-                 sentence; some gems get a bonus "Wait, what?" fact.
+                 sentence; some facts get a bonus "Wait, what?" fact.
     pool.ts      Topic seed lists (7 topics) and a hand-curated pool of
-                 verified gems used as an offline/API-failure fallback.
+                 verified facts used as an offline/API-failure fallback.
     feed.ts      Feed engine: per-mode candidate suppliers, quality
                  filtering, seen-dedup, and queue top-up so the current
-                 gem plus the next 3 are always ready (images preloaded).
+                 fact plus the next 3 are always ready (images preloaded).
     storage.ts   localStorage only: likes, history, seen ids, daily streak,
                  weekly counter, settings. Nothing leaves the device.
+                 Legacy `pepite.*` keys are migrated automatically.
     share.ts     Canvas-rendered shareable card (title + hook + image),
                  shared via the Web Share API with clipboard fallback.
     sound.ts     Optional Web Audio tick/pop + haptics. Off by default.
   components/
     Feed.svelte  Swipe physics (touch drag with velocity + resistance,
-                 wheel, keyboard), double-tap like with heart burst,
-                 progress bar, preloading.
-    GemCard.svelte  Hook / story / payoff screens, Ken Burns background,
-                 rare-frame on occasional gems.
+                 wheel, keyboard), horizontal swipe to skip a fact,
+                 double-tap like with heart burst, progress bar,
+                 preloading.
+    FactCard.svelte  Hook / story / payoff screens, Ken Burns background,
+                 rare-frame on occasional facts.
     ModeSwitcher / StatsSheet / ProgressBar / Toasts / Skeleton
 ```
 
@@ -59,7 +61,7 @@ src/
 
 ## Privacy
 
-No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Sharing produces a link back to Pépite (`?gem=<id>`) that reopens the exact gem in the app — the Wikipedia link stays one tap away inside the gem.
+No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Tapping a liked fact reopens it inside FactFlow (`?fact=<id>`; old `?gem=<id>` links still work) — the Wikipedia link stays one tap away inside the fact.
 
 ## Next steps
 

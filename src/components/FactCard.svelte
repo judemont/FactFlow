@@ -1,46 +1,46 @@
 <script lang="ts">
-  import type { Gem } from '../lib/types';
-  import { shareGem } from '../lib/share';
+  import type { Fact } from '../lib/types';
+  import { shareFact } from '../lib/share';
   import { showToast } from '../lib/toast';
   import { playPop } from '../lib/sound';
 
   let {
-    gem,
+    fact,
     screenIndex,
     preview = false,
   }: {
-    gem: Gem;
+    fact: Fact;
     screenIndex: number;
     preview?: boolean;
   } = $props();
 
   const isHook = $derived(screenIndex === 0);
-  const isPayoff = $derived(screenIndex >= gem.screens.length + 1);
-  const story = $derived(gem.screens[screenIndex - 1] ?? '');
+  const isPayoff = $derived(screenIndex >= fact.screens.length + 1);
+  const story = $derived(fact.screens[screenIndex - 1] ?? '');
 
   async function share(): Promise<void> {
     playPop();
-    const result = await shareGem(gem);
+    const result = await shareFact(fact);
     if (result === 'copied') showToast('Link copied');
     else if (result === 'failed') showToast('Sharing unavailable');
   }
 </script>
 
-<article class="card" class:preview class:rare={gem.rare} aria-label={gem.title}>
-  <div class="bg" class:nograd={!gem.image}>
-    {#if gem.image}
-      <img src={gem.image} alt="" />
+<article class="card" class:preview class:rare={fact.rare} aria-label={fact.title}>
+  <div class="bg" class:nograd={!fact.image}>
+    {#if fact.image}
+      <img src={fact.image} alt="" />
     {/if}
   </div>
   <div class="shade"></div>
-  {#if gem.rare}
+  {#if fact.rare}
     <div class="rare-frame"></div>
   {/if}
   <div class="content">
     {#if isHook}
       <div class="hook-block">
-        <span class="topic">{gem.title}</span>
-        <h1 class="hook">{gem.hook}</h1>
+        <span class="topic">{fact.title}</span>
+        <h1 class="hook">{fact.hook}</h1>
       </div>
       <div class="swipe-hint" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -49,15 +49,15 @@
       </div>
     {:else if isPayoff}
       <div class="payoff">
-        {#if gem.bonus}
+        {#if fact.bonus}
           <div class="bonus">
             <span class="bonus-label">Wait, what?</span>
-            <p>{gem.bonus}</p>
+            <p>{fact.bonus}</p>
           </div>
         {/if}
-        <p class="payoff-title">{gem.title}</p>
+        <p class="payoff-title">{fact.title}</p>
         <div class="payoff-actions">
-          <a class="btn primary" href={gem.articleUrl} target="_blank" rel="noopener noreferrer">
+          <a class="btn primary" href={fact.articleUrl} target="_blank" rel="noopener noreferrer">
             Read on Wikipedia
           </a>
           <button class="btn ghost" onclick={share}>Share</button>

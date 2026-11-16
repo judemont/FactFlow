@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { feed, setMode, ensureAhead, onGemShown, openShared } from '../lib/feed';
+  import { feed, setMode, ensureAhead, onFactShown, openShared } from '../lib/feed';
   import { toggleLike, isLiked } from '../lib/storage';
   import { playTick, playPop, haptic } from '../lib/sound';
   import { showToast } from '../lib/toast';
-  import GemCard from './GemCard.svelte';
+  import FactCard from './FactCard.svelte';
   import ProgressBar from './ProgressBar.svelte';
   import ActionRail from './ActionRail.svelte';
   import ModeSwitcher from './ModeSwitcher.svelte';
@@ -21,16 +21,16 @@
   let bursts = $state<{ id: number; x: number; y: number }[]>([]);
   let likedMap = $state<Record<string, boolean>>({});
 
-  const gems = $derived($feed.gems);
-  const current = $derived(gems[index] ?? null);
-  const nextGem = $derived(gems[index + 1] ?? null);
+  const facts = $derived($feed.facts);
+  const current = $derived(facts[index] ?? null);
+  const nextFact = $derived(facts[index + 1] ?? null);
   const total = $derived(current ? current.screens.length + 2 : 1);
   const atEnd = $derived(
-    current ? screenIndex >= total - 1 && index >= gems.length - 1 : true,
+    current ? screenIndex >= total - 1 && index >= facts.length - 1 : true,
   );
   const atStart = $derived(screenIndex === 0 && index === 0);
 
-  const canSkipForward = $derived(index < gems.length - 1);
+  const canSkipForward = $derived(index < facts.length - 1);
   const canSkipBack = $derived(index > 0);
 
   const cardTransform = $derived.by(() => {
@@ -50,12 +50,12 @@
     const g = current;
     if (g && !counted.has(g.id)) {
       counted.add(g.id);
-      for (const m of onGemShown(g)) showToast(m);
+      for (const m of onFactShown(g)) showToast(m);
     }
   });
 
   $effect(() => {
-    for (const g of gems.slice(index + 1, index + 4)) {
+    for (const g of facts.slice(index + 1, index + 4)) {
       if (g.image) {
         const img = new Image();
         img.src = g.image;
@@ -64,7 +64,8 @@
   });
 
   onMount(() => {
-    const shared = new URLSearchParams(window.location.search).get('gem');
+    const params = new URLSearchParams(window.location.search);
+    const shared = params.get('fact') ?? params.get('gem');
     if (shared) {
       void openShared(shared).then((ok) => {
         if (!ok) void setMode('foryou');
@@ -114,6 +115,20 @@
     index = 0;
     screenIndex = 0;
     dy = 0;
+  }
+
+  async function openLiked(id: string): Promise<void> {
+    const i = facts.findIndex((f) => f.id === id);
+    if (i >= 0) {
+      index = i;
+      screenIndex = 0;
+      return;
+    }
+    const ok = await openShared(id);
+    if (ok) {
+      index = 0;
+      screenIndex = 0;
+    }
   }
 
   function likeCurrent(x?: number, y?: number): void {
@@ -251,25 +266,25 @@
   });
 </script>
 
-<div class="feed" role="region" aria-label="Gem feed" ontouchstart={onTouchStart} ontouchmove={onTouchMove} ontouchend={onTouchEnd}>
+<div class="feed" role="region" aria-label="Fact feed" ontouchstart={onTouchStart} ontouchmove={onTouchMove} ontouchend={onTouchEnd}>
   {#if $feed.loading && !current}
     <Skeleton />
   {:else if current}
     <div class="under" aria-hidden="true">
-      {#if nextGem}
-        <GemCard gem={nextGem} screenIndex={0} preview />
+      {#if nextFact}
+        <FactCard fact={nextFact} screenIndex={0} preview />
       {/if}
     </div>
     <div class="front" class:dragging style:transform={cardTransform}>
-      <GemCard gem={current} {screenIndex} />
+      <FactCard fact={current} {screenIndex} />
     </div>
     <ProgressBar segments={total} active={screenIndex} />
     <header class="top">
-      <StatsSheet />
+      <StatsSheet onopen={(id) => void openLiked(id)} />
       <ModeSwitcher onchange={resetPosition} />
     </header>
     <ActionRail
-      gem={current}
+      fact={current}
       liked={likedMap[current.id] ?? isLiked(current.id)}
       onlike={(x, y) => likeCurrent(x, y)}
     />

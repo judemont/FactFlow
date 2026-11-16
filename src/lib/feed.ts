@@ -1,13 +1,13 @@
 import { get, writable } from 'svelte/store';
-import { buildGem, type RawArticle } from './gem';
+import { buildFact, type RawArticle } from './fact';
 import * as wiki from './wiki';
-import { curatedGems, fallbackGems, topicSeeds, TOPICS } from './pool';
+import { curatedFacts, fallbackFacts, topicSeeds, TOPICS } from './pool';
 import { isSeen, markSeen, recordView, getLikeTopicCounts } from './storage';
 import { hashString, shuffle } from './utils';
-import type { Gem, Mode, Topic } from './types';
+import type { Fact, Mode, Topic } from './types';
 
 export interface FeedState {
-  gems: Gem[];
+  facts: Fact[];
   loading: boolean;
   mode: Mode;
   topic: Topic | null;
@@ -15,7 +15,7 @@ export interface FeedState {
 }
 
 export const feed = writable<FeedState>({
-  gems: [],
+  facts: [],
   loading: true,
   mode: 'foryou',
   topic: null,
@@ -162,7 +162,7 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
 
 function preloadImages(f: FeedState, from: number): void {
   if (typeof Image === 'undefined') return;
-  for (const g of f.gems.slice(from + 1, from + 4)) {
+  for (const g of f.facts.slice(from + 1, from + 4)) {
     if (g.image) {
       const img = new Image();
       img.src = g.image;
@@ -173,7 +173,7 @@ function preloadImages(f: FeedState, from: number): void {
 async function fill(need: number, gen: number): Promise<void> {
   try {
     let attempts = 0;
-    while (get(feed).gems.length < need && attempts < 24) {
+    while (get(feed).facts.length < need && attempts < 24) {
       if (gen !== generation) return;
       attempts++;
       const sup = suppliers.shift();
@@ -187,24 +187,24 @@ async function fill(need: number, gen: number): Promise<void> {
       if (gen !== generation) return;
       if (sup.reusable && !sup.done) suppliers.unshift(sup);
       if (!raw) continue;
-      const gem = buildGem(raw);
-      if (!gem) continue;
-      if (!gem.rare && hashString(gem.id) % 9 === 0) gem.rare = true;
-      if (!gem.image) {
-        gem.image = (await wiki.findArticleImage(raw.title).catch(() => null)) ?? undefined;
+      const fact = buildFact(raw);
+      if (!fact) continue;
+      if (!fact.rare && hashString(fact.id) % 9 === 0) fact.rare = true;
+      if (!fact.image) {
+        fact.image = (await wiki.findArticleImage(raw.title).catch(() => null)) ?? undefined;
       }
       if (gen !== generation) return;
-      if (!gem.image) continue;
-      if (isSeen(gem.id) || added.has(gem.id)) continue;
-      added.add(gem.id);
-      feed.update((f) => ({ ...f, gems: [...f.gems, gem] }));
+      if (!fact.image) continue;
+      if (isSeen(fact.id) || added.has(fact.id)) continue;
+      added.add(fact.id);
+      feed.update((f) => ({ ...f, facts: [...f.facts, fact] }));
     }
     if (gen !== generation) return;
     const after = get(feed);
-    if (after.gems.length < need) {
-      const missing = need - after.gems.length;
-      const extra = fallbackGems()
-        .filter((g) => !after.gems.some((x) => x.id === g.id))
+    if (after.facts.length < need) {
+      const missing = need - after.facts.length;
+      const extra = fallbackFacts()
+        .filter((g) => !after.facts.some((x) => x.id === g.id))
         .slice(0, missing);
       for (const g of extra) {
         if (!g.image) {
@@ -212,14 +212,14 @@ async function fill(need: number, gen: number): Promise<void> {
         }
       }
       if (extra.length) {
-        feed.update((f) => ({ ...f, gems: [...f.gems, ...extra], fallback: true }));
+        feed.update((f) => ({ ...f, facts: [...f.facts, ...extra], fallback: true }));
       }
     }
   } finally {
     if (gen === generation) {
       feed.update((f) => ({ ...f, loading: false }));
       const f = get(feed);
-      preloadImages(f, Math.max(0, f.gems.length - 4));
+      preloadImages(f, Math.max(0, f.facts.length - 4));
     }
   }
 }
@@ -228,13 +228,13 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
   const gen = generation;
   const need = Math.max(4, currentIndex + 4);
   const before = get(feed);
-  if (before.gems.length >= need) {
+  if (before.facts.length >= need) {
     preloadImages(before, currentIndex);
     return;
   }
   await runPromise.catch(() => {});
   if (gen !== generation) return;
-  if (get(feed).gems.length >= need) {
+  if (get(feed).facts.length >= need) {
     preloadImages(get(feed), currentIndex);
     return;
   }
@@ -251,34 +251,34 @@ export async function setMode(
   generation++;
   added.clear();
   suppliers = makeSuppliers(mode, topic);
-  feed.set({ gems: [], loading: true, mode, topic, fallback: false });
+  feed.set({ facts: [], loading: true, mode, topic, fallback: false });
   await ensureAhead();
 }
 
-export function onGemShown(gem: Gem): string[] {
-  markSeen(gem.id);
-  return recordView(gem.id);
+export function onFactShown(fact: Fact): string[] {
+  markSeen(fact.id);
+  return recordView(fact.id);
 }
 
-export async function gemFromId(id: string): Promise<Gem | null> {
+export async function factFromId(id: string): Promise<Fact | null> {
   if (id.startsWith('curated-')) {
-    return curatedGems.find((g) => g.id === id) ?? null;
+    return curatedFacts.find((g) => g.id === id) ?? null;
   }
   if (/^\d+$/.test(id)) {
     const page = await wiki.getPageById(id);
-    return page ? buildGem({ ...page }) : null;
+    return page ? buildFact({ ...page }) : null;
   }
   const page = await wiki.getArticle(id);
-  return page ? buildGem({ ...page }) : null;
+  return page ? buildFact({ ...page }) : null;
 }
 
 export async function openShared(id: string): Promise<boolean> {
-  const gem = await gemFromId(id);
-  if (!gem) return false;
+  const fact = await factFromId(id);
+  if (!fact) return false;
   generation++;
   added.clear();
   suppliers = makeSuppliers('foryou', null);
-  feed.set({ gems: [gem], loading: true, mode: 'foryou', topic: null, fallback: false });
+  feed.set({ facts: [fact], loading: true, mode: 'foryou', topic: null, fallback: false });
   await ensureAhead();
   return true;
 }

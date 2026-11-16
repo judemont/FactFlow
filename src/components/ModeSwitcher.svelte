@@ -39,7 +39,7 @@
             lon: pos.coords.longitude,
           });
           onchange();
-          showToast('Gems near you');
+          showToast('Facts near you');
         },
         () => {
           showToast('Location denied — showing today instead');
