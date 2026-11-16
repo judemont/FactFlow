@@ -143,9 +143,7 @@ function replenish(mode: Mode, topic: Topic | null): void {
     return;
   }
   let seeds: { title: string; topic: Topic }[];
-  if (mode === 'onthisday') {
-    seeds = topicSeeds.history.map((title) => ({ title, topic: 'history' as Topic }));
-  } else if (mode === 'topics' && topic) {
+  if (mode === 'topics' && topic) {
     seeds = topicSeeds[topic].map((title) => ({ title, topic }));
   } else {
     seeds = TOPICS.flatMap((t) => topicSeeds[t.id].map((title) => ({ title, topic: t.id })));
