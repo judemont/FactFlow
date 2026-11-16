@@ -48,9 +48,8 @@ src/
                  calls, extra backoff on HTTP 429).
   components/
     Feed.svelte  Swipe physics (touch drag with velocity + resistance,
-                 wheel, keyboard), horizontal swipe to skip a fact,
-                 double-tap like with heart burst, progress bar,
-                 preloading.
+                 wheel, keyboard), double-tap like with heart burst,
+                 progress bar, preloading.
     FactCard.svelte  Hook / story / payoff screens, Ken Burns background,
                  rare-frame on occasional facts. Tap advances slides,
                  swipe scrolls to the next or previous fact.

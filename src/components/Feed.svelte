@@ -16,9 +16,8 @@
   let screenIndex = $state(0);
   let dy = $state(0);
   let dx = $state(0);
-  let axis: 'x' | 'y' | null = null;
   let dragging = $state(false);
-  let commit = $state<{ axis: 'x' | 'y'; dir: 1 | -1 } | null>(null);
+  let commit = $state<{ dir: 1 | -1 } | null>(null);
   let bursts = $state<{ id: number; x: number; y: number }[]>([]);
   let likedMap = $state<Record<string, boolean>>({});
 
@@ -33,32 +32,25 @@
 
   function slideTransform(pos: 'current' | 'next' | 'prev'): string {
     if (commit) {
-      const axisFn = commit.axis === 'y' ? 'translateY' : 'translateX';
-      if (pos === 'current') return `${axisFn}(${commit.dir < 0 ? '-100%' : '100%'})`;
+      if (pos === 'current') return `translateY(${commit.dir < 0 ? '-100%' : '100%'})`;
       const incoming = commit.dir < 0 ? 'next' : 'prev';
       if (pos === incoming) return 'translate(0)';
-      return `${axisFn}(${commit.dir < 0 ? '100%' : '-100%'})`;
+      return `translateY(${commit.dir < 0 ? '100%' : '-100%'})`;
     }
     if (!dragging) {
       if (pos === 'current') return 'translate(0)';
       return pos === 'next' ? 'translate(100%)' : 'translate(-100%)';
     }
     const capped =
-      ((axis === 'y' ? dy : dx) < 0 && !canSkipForward) ||
-      ((axis === 'y' ? dy : dx) > 0 && !canSkipBack)
-        ? (axis === 'y' ? dy : dx) * 0.25
-        : axis === 'y'
-          ? dy
-          : dx;
-    const axisFn = axis === 'y' ? 'translateY' : 'translateX';
-    if (pos === 'current') return `${axisFn}(${capped}px)`;
-    if (pos === 'next') return `${axisFn}(calc(100% + ${capped}px))`;
-    return `${axisFn}(calc(-100% + ${capped}px))`;
+      (dy < 0 && !canSkipForward) || (dy > 0 && !canSkipBack) ? dy * 0.25 : dy;
+    if (pos === 'current') return `translateY(${capped}px)`;
+    if (pos === 'next') return `translateY(calc(100% + ${capped}px))`;
+    return `translateY(calc(-100% + ${capped}px))`;
   }
 
-  function commitSlide(axis: 'x' | 'y', dir: 1 | -1): void {
+  function commitSlide(dir: 1 | -1): void {
     if (commit) return;
-    commit = { axis, dir };
+    commit = { dir };
     setTimeout(() => {
       if (dir < 0) {
         index++;
@@ -114,14 +106,14 @@
   function skipForward(): boolean {
     if (!current || !canSkipForward || commit) return false;
     playTick();
-    commitSlide('y', -1);
+    commitSlide(-1);
     return true;
   }
 
   function skipBack(): boolean {
     if (!canSkipBack || commit) return false;
     playTick();
-    commitSlide('y', 1);
+    commitSlide(1);
     return true;
   }
 
@@ -165,11 +157,9 @@
 
   let startY = 0;
   let startX = 0;
-  let lastX = 0;
   let lastY = 0;
   let lastT = 0;
   let velocity = 0;
-  let hVel = 0;
   let startT = 0;
   let curX = 0;
   let curY = 0;
@@ -199,16 +189,14 @@
     if (commit) return;
     const t = e.touches[0];
     dragging = true;
-    axis = null;
     startY = lastY = t.clientY;
-    startX = lastX = t.clientX;
+    startX = t.clientX;
     dx = 0;
     dy = 0;
     curX = t.clientX;
     curY = t.clientY;
     startT = lastT = performance.now();
     velocity = 0;
-    hVel = 0;
   }
 
   function onTouchMove(e: TouchEvent): void {
@@ -216,24 +204,11 @@
     const t = e.touches[0];
     dx = t.clientX - startX;
     dy = t.clientY - startY;
-    if (!axis) {
-      if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-        axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      }
-    }
-    if (axis === 'y') {
-      const now = performance.now();
-      const dt = Math.max(1, now - lastT);
-      velocity = (t.clientY - lastY) / dt;
-      lastY = t.clientY;
-      lastT = now;
-    } else if (axis === 'x') {
-      const now = performance.now();
-      const dt = Math.max(1, now - lastT);
-      hVel = (t.clientX - lastX) / dt;
-      lastX = t.clientX;
-      lastT = now;
-    }
+    const now = performance.now();
+    const dt = Math.max(1, now - lastT);
+    velocity = (t.clientY - lastY) / dt;
+    lastY = t.clientY;
+    lastT = now;
   }
 
   function onTouchEnd(): void {
@@ -241,8 +216,6 @@
     dragging = false;
     const d = dy;
     const dxEnd = dx;
-    const usedAxis = axis;
-    axis = null;
     dy = 0;
     dx = 0;
     const now = performance.now();
@@ -259,14 +232,6 @@
         prevTapT = now;
         prevTapX = curX;
         scheduleTap();
-      }
-      return;
-    }
-    if (usedAxis === 'x') {
-      if (dxEnd < -70 || hVel < -0.6) {
-        if (canSkipForward) commitSlide('x', -1);
-      } else if (dxEnd > 70 || hVel > 0.6) {
-        if (canSkipBack) commitSlide('x', 1);
       }
       return;
     }
@@ -292,12 +257,6 @@
         e.preventDefault();
         skipForward();
       } else if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'k') {
-        e.preventDefault();
-        skipBack();
-      } else if (e.key === 'ArrowRight' || e.key === 'l') {
-        e.preventDefault();
-        skipForward();
-      } else if (e.key === 'ArrowLeft' || e.key === 'h') {
         e.preventDefault();
         skipBack();
       }
