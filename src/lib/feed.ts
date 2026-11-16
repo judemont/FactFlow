@@ -22,7 +22,7 @@ export const feed = writable<FeedState>({
   fallback: false,
 });
 
-type Supplier = () => Promise<RawArticle | null>;
+type Supplier = (() => Promise<RawArticle | null>) & { reusable?: boolean };
 
 let suppliers: Supplier[] = [];
 let loadingMore = false;
@@ -56,6 +56,36 @@ function restSupplier(p: wiki.RestPage, fallbackTopic?: Topic): Supplier {
     }
     return pageSupplier(title, fallbackTopic)();
   };
+}
+
+function onThisDaySupplier(): Supplier {
+  let pages: wiki.RestPage[] | null = null;
+  let idx = 0;
+  const sup = async () => {
+    if (!pages) {
+      const now = new Date();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const events = await wiki.getOnThisDay(mm, dd);
+      const seen = new Set<string>();
+      pages = [];
+      for (const ev of shuffle(events)) {
+        const p = ev.pages.find((x) => x.thumbnail) ?? ev.pages[0];
+        if (!p) continue;
+        const title = p.titles?.normalized ?? p.title;
+        if (!title || seen.has(title)) continue;
+        seen.add(title);
+        pages.push(p);
+      }
+    }
+    while (idx < pages.length) {
+      const raw = await restSupplier(pages[idx++], 'history')();
+      if (raw) return raw;
+    }
+    return null;
+  };
+  sup.reusable = true;
+  return sup;
 }
 
 function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
@@ -94,19 +124,7 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
 
   if (mode === 'onthisday') {
     return [
-      async () => {
-        const now = new Date();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const events = await wiki.getOnThisDay(mm, dd);
-        for (const ev of shuffle(events)) {
-          const withThumb = ev.pages.find((p) => p.thumbnail) ?? ev.pages[0];
-          if (!withThumb) continue;
-          const raw = await restSupplier(withThumb, 'history')();
-          if (raw) return raw;
-        }
-        return null;
-      },
+      onThisDaySupplier(),
       ...shuffle(topicSeeds.history).map((title) => pageSupplier(title, 'history')),
     ];
   }
@@ -166,6 +184,7 @@ export async function ensureAhead(currentIndex = 0): Promise<void> {
         raw = null;
       }
       if (!raw) continue;
+      if (sup.reusable) suppliers.unshift(sup);
       const gem = buildGem(raw);
       if (!gem) continue;
       if (!gem.rare && hashString(gem.id) % 9 === 0) gem.rare = true;
