@@ -176,6 +176,7 @@
   let tapTimer: ReturnType<typeof setTimeout> | null = null;
   let tapScheduledScreen = 0;
   let lastTouchEnd = 0;
+  let onInteractive = false;
 
   function scheduleTap(): void {
     if (tapTimer) clearTimeout(tapTimer);
@@ -195,6 +196,7 @@
   function onTouchStart(e: TouchEvent): void {
     if (commit) return;
     const t = e.touches[0];
+    onInteractive = !!(e.target as HTMLElement).closest('button, a, input, label');
     dragging = true;
     startY = lastY = t.clientY;
     startX = t.clientX;
@@ -229,6 +231,7 @@
     const now = performance.now();
     lastTouchEnd = now;
     if (Math.abs(d) < 10 && Math.abs(dxEnd) < 10 && now - startT < 260) {
+      if (onInteractive) return;
       if (now - prevTapT < 340 && Math.abs(curX - prevTapX) < 70) {
         likeCurrent(curX, curY);
         prevTapT = 0;
