@@ -18,6 +18,38 @@
   const isPayoff = $derived(screenIndex >= fact.screens.length + 1);
   const story = $derived(fact.screens[screenIndex - 1] ?? '');
 
+  const hookWords = $derived(fact.hook.split(/\s+/).filter(Boolean));
+  let hookShown = $state(0);
+
+  $effect(() => {
+    if (preview || hookWords.length === 0) {
+      hookShown = hookWords.length;
+      return;
+    }
+    const reduced =
+      typeof matchMedia === 'function' &&
+      matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      hookShown = hookWords.length;
+      return;
+    }
+    hookShown = 0;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < hookWords.length; i++) {
+      timers.push(
+        setTimeout(
+          () => {
+            hookShown = i + 1;
+          },
+          i * 190,
+        ),
+      );
+    }
+    return () => {
+      for (const t of timers) clearTimeout(t);
+    };
+  });
+
   async function share(): Promise<void> {
     playPop();
     const result = await shareFact(fact);
@@ -40,7 +72,11 @@
     {#if isHook}
       <div class="hook-block">
         <span class="topic">{fact.title}</span>
-        <h1 class="hook">{fact.hook}</h1>
+        <h1 class="hook" aria-label={fact.hook}>
+          {#each hookWords as word, i (i)}
+            <span class="hook-word" class:shown={i < hookShown} aria-hidden="true">{word}</span>{' '}
+          {/each}
+        </h1>
       </div>
       <div class="swipe-hint" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -150,6 +186,26 @@
     letter-spacing: -0.025em;
     text-wrap: balance;
     text-shadow: 0 2px 24px rgba(0, 0, 0, 0.6);
+  }
+  .hook-word {
+    display: inline-block;
+    opacity: 0;
+  }
+  .hook-word.shown {
+    animation: word-in 0.18s var(--ease-spring) both;
+  }
+  .card.preview .hook-word {
+    animation: none;
+  }
+  @keyframes word-in {
+    from {
+      transform: translateY(0.35em) scale(0.9);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
   }
   .swipe-hint {
     position: absolute;
