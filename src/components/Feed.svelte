@@ -15,6 +15,8 @@
   let index = $state(0);
   let screenIndex = $state(0);
   let dy = $state(0);
+  let dx = $state(0);
+  let axis: 'x' | 'y' | null = null;
   let dragging = $state(false);
   let bursts = $state<{ id: number; x: number; y: number }[]>([]);
   let likedMap = $state<Record<string, boolean>>({});
@@ -28,8 +30,16 @@
   );
   const atStart = $derived(screenIndex === 0 && index === 0);
 
+  const canSkipForward = $derived(index < gems.length - 1);
+  const canSkipBack = $derived(index > 0);
+
   const cardTransform = $derived.by(() => {
     if (!dragging) return 'translateY(0)';
+    if (axis === 'x') {
+      const capped = (dx < 0 && !canSkipForward) || (dx > 0 && !canSkipBack) ? dx * 0.25 : dx;
+      const scale = 1 - Math.min(Math.abs(capped) / 4500, 0.04);
+      return `translateX(${capped}px) scale(${scale})`;
+    }
     const capped = (atEnd && dy < 0) || (atStart && dy > 0) ? dy * 0.25 : dy;
     const scale = 1 - Math.min(Math.abs(capped) / 4500, 0.04);
     return `translateY(${capped}px) scale(${scale})`;
@@ -69,11 +79,8 @@
     if (screenIndex < total - 1) {
       screenIndex++;
       playTick();
-    } else if (index < gems.length - 1) {
-      index++;
-      screenIndex = 0;
-      playTick();
-      void ensureAhead(index);
+    } else {
+      skipForward();
     }
   }
 
@@ -81,11 +88,26 @@
     if (screenIndex > 0) {
       screenIndex--;
       playTick();
-    } else if (index > 0) {
-      index--;
-      screenIndex = 0;
-      playTick();
+    } else {
+      skipBack();
     }
+  }
+
+  function skipForward(): boolean {
+    if (!current || !canSkipForward) return false;
+    index++;
+    screenIndex = 0;
+    playTick();
+    void ensureAhead(index);
+    return true;
+  }
+
+  function skipBack(): boolean {
+    if (!canSkipBack) return false;
+    index--;
+    screenIndex = 0;
+    playTick();
+    return true;
   }
 
   function resetPosition(): void {
@@ -113,9 +135,12 @@
   }
 
   let startY = 0;
+  let startX = 0;
+  let lastX = 0;
   let lastY = 0;
   let lastT = 0;
   let velocity = 0;
+  let hVel = 0;
   let startT = 0;
   let curX = 0;
   let curY = 0;
@@ -126,31 +151,54 @@
   function onTouchStart(e: TouchEvent): void {
     const t = e.touches[0];
     dragging = true;
+    axis = null;
     startY = lastY = t.clientY;
+    startX = lastX = t.clientX;
+    dx = 0;
+    dy = 0;
     curX = t.clientX;
     curY = t.clientY;
     startT = lastT = performance.now();
     velocity = 0;
+    hVel = 0;
   }
 
   function onTouchMove(e: TouchEvent): void {
     if (!dragging) return;
     const t = e.touches[0];
+    dx = t.clientX - startX;
     dy = t.clientY - startY;
-    const now = performance.now();
-    const dt = Math.max(1, now - lastT);
-    velocity = (t.clientY - lastY) / dt;
-    lastY = t.clientY;
-    lastT = now;
+    if (!axis) {
+      if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+        axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+    }
+    if (axis === 'y') {
+      const now = performance.now();
+      const dt = Math.max(1, now - lastT);
+      velocity = (t.clientY - lastY) / dt;
+      lastY = t.clientY;
+      lastT = now;
+    } else if (axis === 'x') {
+      const now = performance.now();
+      const dt = Math.max(1, now - lastT);
+      hVel = (t.clientX - lastX) / dt;
+      lastX = t.clientX;
+      lastT = now;
+    }
   }
 
   function onTouchEnd(): void {
     if (!dragging) return;
     dragging = false;
     const d = dy;
+    const dxEnd = dx;
+    const usedAxis = axis;
+    axis = null;
     dy = 0;
+    dx = 0;
     const now = performance.now();
-    if (Math.abs(d) < 10 && now - startT < 260) {
+    if (Math.abs(d) < 10 && Math.abs(dxEnd) < 10 && now - startT < 260) {
       if (now - prevTapT < 340 && Math.abs(curX - prevTapX) < 70) {
         likeCurrent(curX, curY);
         prevTapT = 0;
@@ -158,6 +206,11 @@
         prevTapT = now;
         prevTapX = curX;
       }
+      return;
+    }
+    if (usedAxis === 'x') {
+      if (dxEnd < -70 || hVel < -0.6) skipForward();
+      else if (dxEnd > 70 || hVel > 0.6) skipBack();
       return;
     }
     if (!atEnd && (d < -70 || velocity < -0.6)) advance();
@@ -181,6 +234,12 @@
       } else if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'k') {
         e.preventDefault();
         back();
+      } else if (e.key === 'ArrowRight' || e.key === 'l') {
+        e.preventDefault();
+        skipForward();
+      } else if (e.key === 'ArrowLeft' || e.key === 'h') {
+        e.preventDefault();
+        skipBack();
       }
     };
     window.addEventListener('wheel', onWheel, { passive: false });
