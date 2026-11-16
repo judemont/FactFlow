@@ -68,13 +68,16 @@
     <div class="sheet" role="dialog" aria-label="Discovery modes">
       <div class="modes">
         {#each Object.entries(MODE_LABELS) as [mode, text] (mode)}
-          <button class="row" class:active={$feed.mode === mode} onclick={() => pick(mode as Mode)}>
-            <span>{text}</span>
-            {#if $feed.mode === mode}<span class="check">✓</span>{/if}
-          </button>
+          {#if mode !== 'topics'}
+            <button class="row" class:active={$feed.mode === mode} onclick={() => pick(mode as Mode)}>
+              <span>{text}</span>
+              {#if $feed.mode === mode}<span class="check">✓</span>{/if}
+            </button>
+          {/if}
         {/each}
       </div>
       <div class="divider"></div>
+      <div class="topics-header">Topics</div>
       <div class="topics">
         {#each TOPICS as t (t.id)}
           <button
@@ -154,6 +157,14 @@
     height: 1px;
     background: var(--hairline);
     margin: 12px 0;
+  }
+  .topics-header {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(250, 250, 250, 0.5);
+    margin-bottom: 10px;
   }
   .topics {
     display: flex;
