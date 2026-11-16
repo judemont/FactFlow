@@ -22,9 +22,10 @@ export const feed = writable<FeedState>({
   fallback: false,
 });
 
-type Supplier = (() => Promise<RawArticle | null>) & { reusable?: boolean };
+type Supplier = (() => Promise<RawArticle | null>) & { reusable?: boolean; done?: boolean };
 
 let suppliers: Supplier[] = [];
+const added = new Set<string>();
 let generation = 0;
 let runPromise: Promise<void> = Promise.resolve();
 let coords: { lat: number; lon: number } | null = null;
@@ -80,9 +81,15 @@ function onThisDaySupplier(): Supplier {
       }
     }
     while (idx < pages.length) {
-      const raw = await restSupplier(pages[idx++], 'history')();
-      if (raw) return raw;
+      const p = pages[idx++];
+      try {
+        const raw = await restSupplier(p, 'history')();
+        if (raw) return raw;
+      } catch {
+        continue;
+      }
     }
+    sup.done = true;
     return null;
   };
   sup.reusable = true;
@@ -178,8 +185,8 @@ async function fill(need: number, gen: number): Promise<void> {
         raw = null;
       }
       if (gen !== generation) return;
+      if (sup.reusable && !sup.done) suppliers.unshift(sup);
       if (!raw) continue;
-      if (sup.reusable) suppliers.unshift(sup);
       const gem = buildGem(raw);
       if (!gem) continue;
       if (!gem.rare && hashString(gem.id) % 9 === 0) gem.rare = true;
@@ -188,8 +195,8 @@ async function fill(need: number, gen: number): Promise<void> {
       }
       if (gen !== generation) return;
       if (!gem.image) continue;
-      if (isSeen(gem.id)) continue;
-      markSeen(gem.id);
+      if (isSeen(gem.id) || added.has(gem.id)) continue;
+      added.add(gem.id);
       feed.update((f) => ({ ...f, gems: [...f.gems, gem] }));
     }
     if (gen !== generation) return;
@@ -242,6 +249,7 @@ export async function setMode(
 ): Promise<void> {
   if (location) coords = location;
   generation++;
+  added.clear();
   suppliers = makeSuppliers(mode, topic);
   feed.set({ gems: [], loading: true, mode, topic, fallback: false });
   await ensureAhead();
@@ -268,6 +276,7 @@ export async function openShared(id: string): Promise<boolean> {
   const gem = await gemFromId(id);
   if (!gem) return false;
   generation++;
+  added.clear();
   suppliers = makeSuppliers('foryou', null);
   feed.set({ gems: [gem], loading: true, mode: 'foryou', topic: null, fallback: false });
   await ensureAhead();
