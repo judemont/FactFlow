@@ -228,7 +228,7 @@ export function buildFact(a: RawArticle): Fact | null {
       reveal = cut.reveal;
     }
   }
-  if (hook.length > 180) {
+  if (hook.length > 150) {
     let trimmed = hook.slice(0, 177).replace(/\s+\S*$/, '');
     const words = trimmed.split(' ');
     while (words.length > 4 && DANGLING.has((words[words.length - 1] ?? '').toLowerCase())) {
