@@ -80,6 +80,18 @@ jobs:
             exit 1
           fi
           rm -f /tmp/keystore-check.p12 /tmp/keystore-check.log
+      - name: Derive version from tag
+        if: env.SKIP != 'true'
+        run: |
+          NAME="${GITHUB_REF_NAME#v}"
+          if [[ "$NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+            echo "VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+            echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+            echo "Building version $NAME (versionCode $CODE) from tag $GITHUB_REF_NAME"
+          else
+            echo "::warning::Tag '$GITHUB_REF_NAME' is not semver (vX.Y.Z) - falling back to default version 1.0 (versionCode 1)"
+          fi
       - name: Build signed release APK and AAB
         if: env.SKIP != 'true'
         run: ./gradlew assembleRelease bundleRelease --no-daemon
