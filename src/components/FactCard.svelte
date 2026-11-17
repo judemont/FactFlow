@@ -18,6 +18,7 @@
 
   const hookWords = $derived(fact.hook.split(/\s+/).filter(Boolean));
   let hookShown = $state(0);
+  let hookTimers: ReturnType<typeof setTimeout>[] = [];
 
   $effect(() => {
     if (hookWords.length === 0) {
@@ -32,9 +33,8 @@
       return;
     }
     hookShown = 0;
-    const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < hookWords.length; i++) {
-      timers.push(
+      hookTimers.push(
         setTimeout(
           () => {
             hookShown = i + 1;
@@ -44,9 +44,18 @@
       );
     }
     return () => {
-      for (const t of timers) clearTimeout(t);
+      for (const t of hookTimers) clearTimeout(t);
+      hookTimers = [];
     };
   });
+
+  export function revealAll(): boolean {
+    if (hookShown >= hookWords.length) return false;
+    for (const t of hookTimers) clearTimeout(t);
+    hookTimers = [];
+    hookShown = hookWords.length;
+    return true;
+  }
 
   async function share(): Promise<void> {
     playPop();
