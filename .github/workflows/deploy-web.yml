@@ -9,10 +9,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SSH_HOST: ${{ secrets.SSH_HOST }}
-  SSH_USER: ${{ secrets.SSH_USER }}
-  SSH_PORT: ${{ secrets.SSH_PORT }}
-  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+  FTP_SERVER: ${{ secrets.FTP_SERVER }}
+  FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+  FTP_PORT: ${{ secrets.FTP_PORT }}
+  FTP_PROTOCOL: ${{ secrets.FTP_PROTOCOL }}
+  FTP_REMOTE_DIR: ${{ secrets.FTP_REMOTE_DIR }}
 
 jobs:
   build:
@@ -40,19 +41,21 @@ jobs:
         with:
           name: web-dist
           path: dist
-      - name: Skip when SSH secrets are missing
+      - name: Skip when FTP secrets are missing
         run: |
-          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ]; then
-            echo "::warning::SSH_HOST or SSH_USER secret is not set - skipping deployment"
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ]; then
+            echo "::warning::FTP_SERVER or FTP_USERNAME secret is not set - skipping deployment"
             echo "SKIP=true" >> "$GITHUB_ENV"
           fi
-      - name: Set up SSH key
+      - name: Deploy via FTP
         if: env.SKIP != 'true'
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-      - name: Rsync dist to server
-        if: env.SKIP != 'true'
-        run: rsync -az --delete dist/ "$SSH_USER@$SSH_HOST:${DEPLOY_PATH:-/var/www/factsflow/}"
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
+          local-dir: dist/
+          server-dir: ${{ secrets.FTP_REMOTE_DIR || '/factsflow/' }}
+          log-level: minimal

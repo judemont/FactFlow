@@ -105,17 +105,18 @@ No account, no analytics, no trackers. Likes, history, streak and settings live 
 GitHub Actions, all free tier:
 
 - **CI** — on every PR and push to `main`: `svelte-check` + build.
-- **Deploy web** — on every push to `main`: build then rsync `dist/` to the server over SSH. Skips gracefully (with a warning) until the SSH secrets below are set.
+- **Deploy web** — on every push to `main`: build then upload `dist/` to the server via FTP(S). Skips gracefully (with a warning) until the FTP secrets below are set.
 - **Android APK** — manual trigger (Actions tab) or on a `v*` tag: builds the web bundle, syncs Capacitor, compiles a debug APK and uploads it as a downloadable artifact. Requires the Capacitor `android/` project to exist.
 
 Repository secrets (Settings → Secrets and variables → Actions) for the web deployment:
 
 | Secret | Value |
 | --- | --- |
-| `SSH_HOST` | Server host, e.g. `jdm.coffee` |
-| `SSH_USER` | SSH user on that server |
-| `SSH_PRIVATE_KEY` | Private key of a dedicated deploy key (public half in the server's `~/.ssh/authorized_keys`) |
-| `SSH_PORT` | Optional, defaults to `22` |
-| `DEPLOY_PATH` | Optional, defaults to `/var/www/factsflow/` |
+| `FTP_SERVER` | FTP host, e.g. `ftp.jdm.coffee` |
+| `FTP_USERNAME` | FTP login |
+| `FTP_PASSWORD` | FTP password |
+| `FTP_PORT` | Optional, defaults to `21` |
+| `FTP_PROTOCOL` | Optional: `ftp`, `ftps` or `ftpes` — defaults to `ftps` |
+| `FTP_REMOTE_DIR` | Optional target folder on the server, defaults to `/factsflow/` (must end with `/`) |
 
 
