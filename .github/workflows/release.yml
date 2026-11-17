@@ -54,8 +54,32 @@ jobs:
             echo "storeFile=keystore.keystore"
             echo "storePassword=$KEYSTORE_PASSWORD"
             echo "keyAlias=$KEY_ALIAS"
-            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyPassword=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
           } > android/keystore.properties
+      - name: Verify keystore secrets
+        if: env.SKIP != 'true'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          KEY_PASS="${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+          if ! keytool -list -keystore android/app/keystore.keystore -storepass "$KEYSTORE_PASSWORD" > /dev/null 2>&1; then
+            echo "::error::KEYSTORE_PASSWORD does not match this keystore - check the secret for typos"
+            exit 1
+          fi
+          if ! keytool -list -keystore android/app/keystore.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error::Alias '$KEY_ALIAS' not found in the keystore. Available aliases:"
+            keytool -list -keystore android/app/keystore.keystore -storepass "$KEYSTORE_PASSWORD"
+            exit 1
+          fi
+          if ! keytool -importkeystore -srckeystore android/app/keystore.keystore -srcstorepass "$KEYSTORE_PASSWORD" -srcalias "$KEY_ALIAS" -srckeypass "$KEY_PASS" -destkeystore /tmp/keystore-check.p12 -deststorepass check123 -destkeypass check123 -noprompt > /tmp/keystore-check.log 2>&1; then
+            echo "::error::Reading the private key for alias '$KEY_ALIAS' failed - keytool said:"
+            grep -v "stored" /tmp/keystore-check.log | head -5
+            echo "::error::If the key uses the same password as the keystore, delete the KEY_PASSWORD secret so the workflow reuses KEYSTORE_PASSWORD; otherwise set KEY_PASSWORD to the actual key password"
+            exit 1
+          fi
+          rm -f /tmp/keystore-check.p12 /tmp/keystore-check.log
       - name: Build signed release APK and AAB
         if: env.SKIP != 'true'
         run: ./gradlew assembleRelease bundleRelease --no-daemon
