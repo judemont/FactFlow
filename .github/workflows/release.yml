@@ -54,7 +54,7 @@ jobs:
             echo "storeFile=keystore.keystore"
             echo "storePassword=$KEYSTORE_PASSWORD"
             echo "keyAlias=$KEY_ALIAS"
-            echo "keyPassword=$KEY_PASSWORD"
+            echo "keyPassword=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
           } > android/keystore.properties
       - name: Build signed release APK and AAB
         if: env.SKIP != 'true'
