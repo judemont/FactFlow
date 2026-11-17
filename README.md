@@ -99,24 +99,3 @@ src/
 ## Privacy
 
 No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Tapping a liked fact reopens it inside FactsFlow (`?fact=<id>`; old `?gem=<id>` links still work) — the Wikipedia link stays one tap away inside the fact.
-
-## CI/CD
-
-GitHub Actions, all free tier:
-
-- **CI** — on every PR and push to `main`: `svelte-check` + build.
-- **Deploy web** — on every push to `main`: build then upload `dist/` to the server via FTP(S). Skips gracefully (with a warning) until the FTP secrets below are set.
-- **Android APK** — manual trigger (Actions tab) or on a `v*` tag: builds the web bundle, syncs Capacitor, compiles a debug APK and uploads it as a downloadable artifact. Requires the Capacitor `android/` project to exist.
-
-Repository secrets (Settings → Secrets and variables → Actions) for the web deployment:
-
-| Secret | Value |
-| --- | --- |
-| `FTP_SERVER` | FTP host, e.g. `ftp.jdm.coffee` |
-| `FTP_USERNAME` | FTP login |
-| `FTP_PASSWORD` | FTP password |
-| `FTP_PORT` | Optional, defaults to `21` |
-| `FTP_PROTOCOL` | Optional: `ftp`, `ftps` or `ftpes` — defaults to `ftps` |
-| `FTP_REMOTE_DIR` | Optional target folder on the server, defaults to `/factsflow/` (must end with `/`) |
-
-
