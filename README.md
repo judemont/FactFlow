@@ -99,5 +99,3 @@ src/
 ## Privacy
 
 No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Tapping a liked fact reopens it inside FactsFlow (`?fact=<id>`; old `?gem=<id>` links still work) — the Wikipedia link stays one tap away inside the fact.
-
-
