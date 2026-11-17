@@ -10,9 +10,9 @@ FactsFlow is a TikTok-style feed where every "video" is a true story pulled from
 
 No account. No ads. No engagement algorithm. Just the strangest and smartest true stories on the internet, one swipe at a time.
 
-| Feed | Stats | Share card |
+| Feed | Stats | Feed |
 | --- | --- | --- |
-| ![Feed](docs/screenshot-feed.png) | ![Stats](docs/screenshot-stats.png) | ![Share card](docs/screenshot-share.png) |
+| ![Feed](docs/screenshot-feed.png) | ![Stats](docs/screenshot-stats.png) | ![Feed](docs/screenshot-feed-details.png) |
 
 ## Why it hooks
 
