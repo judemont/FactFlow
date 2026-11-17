@@ -6,6 +6,10 @@
   <img src="docs/screenshot.png" alt="FactsFlow — hook screen" width="300">
 </p>
 
+---
+[factsflow.jdm.coffee](https://factsflow.jdm.coffee)
+---
+
 FactsFlow is a TikTok-style feed where every "video" is a true story pulled from the best of English Wikipedia. Each fact opens with a hook built to stop your thumb, unfolds in a few short screens — context, development, twist — and ends one tap away from the full article.
 
 No account. No ads. No engagement algorithm. Just the strangest and smartest true stories on the internet, one swipe at a time.
