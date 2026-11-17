@@ -23,6 +23,8 @@ jobs:
     needs: guard
     runs-on: ubuntu-latest
     if: needs.guard.outputs.present == 'true'
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
