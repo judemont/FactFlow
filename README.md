@@ -1,6 +1,35 @@
 # FactsFlow
 
-A TikTok-style vertical feed where every "video" is a fact extracted from a high-quality English Wikipedia article. Hook first, story after — learning that feels like a social feed.
+> **Doomscrolling, but you learn something.**
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="FactsFlow — hook screen" width="300">
+</p>
+
+FactsFlow is a TikTok-style feed where every "video" is a true story pulled from the best of English Wikipedia. Each fact opens with a hook built to stop your thumb, unfolds in a few short screens — context, development, twist — and ends one tap away from the full article.
+
+No account. No ads. No engagement algorithm. Just the strangest and smartest true stories on the internet, one swipe at a time.
+
+| Feed | Stats | Feed |
+| --- | --- | --- |
+| ![Feed](docs/screenshot-feed.png) | ![Stats](docs/screenshot-stats.png) | ![Feed](docs/screenshot-feed-details.png) |
+
+## Why it hooks
+
+- **Hook in under 3 seconds** — the most surprising sentence of the article, huge type, no fluff.
+- **Curiosity gap** — the hook teases, the reveal lives on the next screen.
+- **Story, not wall of text** — 3–6 short screens ordered like a mini-story, ending on a twist. Some facts hide a bonus "Wait, what?" screen.
+- **Rare facts** — occasionally a fact drops with a golden frame. A small reason to keep going.
+- **Finish the loop** — a segmented progress bar tracks the story; an unfinished one is hard to leave.
+
+## Features
+
+- Full-screen vertical feed: tap for the next slide, swipe (or scroll / arrow keys) for the next fact.
+- 4 discovery modes: **For you**, **On this day**, **Topics** (science, history, crime & mysteries, space, nature, arts, tech) and **Near me**.
+- Double-tap to like with a heart burst; share generates a clean shareable card.
+- Streaks, weekly counter and milestone toasts — all stored on your device.
+- The next facts (and their images) are always preloaded: swiping never shows a spinner.
+- Reduced motion respected, keyboard accessible, works with no config and no API key.
 
 ## Setup
 
@@ -61,7 +90,7 @@ src/
 - **For you** — the main feed: today's featured and most-read articles mixed with topic seeds, weighted by the topics you like the most.
 - **On this day** — Wikipedia's "selected" events for today's date.
 - **Topics** — science, history, crime & mysteries, space, nature, arts, tech.
-- **Near me** — geosearch around your location (permission asked only when the mode opens).
+- **Near me** — geosearch around your location (permission asked only when the mode opens). When a mode runs dry, the feed falls back to For you instead of ending.
 
 ## Privacy
 
