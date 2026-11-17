@@ -61,7 +61,9 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          KEY_PASS="${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
           if ! keytool -list -keystore android/app/keystore.keystore -storepass "$KEYSTORE_PASSWORD" > /dev/null 2>&1; then
             echo "::error::KEYSTORE_PASSWORD does not match this keystore - check the secret for typos"
             exit 1
@@ -71,6 +73,11 @@ jobs:
             keytool -list -keystore android/app/keystore.keystore -storepass "$KEYSTORE_PASSWORD"
             exit 1
           fi
+          if ! keytool -importkeystore -srckeystore android/app/keystore.keystore -srcstorepass "$KEYSTORE_PASSWORD" -srcalias "$KEY_ALIAS" -srckeypass "$KEY_PASS" -destkeystore /tmp/keystore-check.p12 -deststorepass check -destkeypass check -noprompt > /dev/null 2>&1; then
+            echo "::error::The key password for alias '$KEY_ALIAS' is wrong. If the key uses the same password as the keystore, delete the KEY_PASSWORD secret so the workflow reuses KEYSTORE_PASSWORD; otherwise set KEY_PASSWORD to the actual key password"
+            exit 1
+          fi
+          rm -f /tmp/keystore-check.p12
       - name: Build signed release APK and AAB
         if: env.SKIP != 'true'
         run: ./gradlew assembleRelease bundleRelease --no-daemon
