@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FactsFlow</string>
+    <string name="title_activity_main">FactsFlow</string>
+    <string name="package_name">coffee.jdm.factsflow</string>
+    <string name="custom_url_scheme">coffee.jdm.factsflow</string>
+</resources>
