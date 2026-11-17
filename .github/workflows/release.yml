@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to attach the APK and AAB to (optional)
+        required: false
+        type: string
 
 concurrency:
   group: release-apk
@@ -84,15 +89,17 @@ jobs:
           rm -f /tmp/keystore-check.p12 /tmp/keystore-check.log
       - name: Derive version from tag
         if: env.SKIP != 'true'
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          NAME="${GITHUB_REF_NAME#v}"
+          NAME="${RELEASE_TAG#v}"
           if [[ "$NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
             echo "VERSION_NAME=$NAME" >> "$GITHUB_ENV"
             echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
-            echo "Building version $NAME (versionCode $CODE) from tag $GITHUB_REF_NAME"
+            echo "Building version $NAME (versionCode $CODE) from tag $RELEASE_TAG"
           else
-            echo "::warning::Tag '$GITHUB_REF_NAME' is not semver (vX.Y.Z) - falling back to default version 1.0 (versionCode 1)"
+            echo "::warning::Tag '$RELEASE_TAG' is not semver (vX.Y.Z) - falling back to default version 1.0 (versionCode 1)"
           fi
       - name: Build signed release APK and AAB
         if: env.SKIP != 'true'
@@ -107,11 +114,12 @@ jobs:
             android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
       - name: Attach APK and AAB to the release
-        if: github.event_name == 'release' && env.SKIP != 'true'
+        if: (github.event_name == 'release' || inputs.tag != '') && env.SKIP != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "$RELEASE_TAG" \
             android/app/build/outputs/apk/release/app-release.apk \
             android/app/build/outputs/bundle/release/app-release.aab \
             --repo "$GITHUB_REPOSITORY" --clobber
