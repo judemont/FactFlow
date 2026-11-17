@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { soundEnabled } from './storage';
 
 let ctx: AudioContext | null = null;
@@ -44,6 +46,10 @@ export function playPop(): void {
 
 export function haptic(ms: number): void {
   try {
+    if (Capacitor.isNativePlatform()) {
+      void Haptics.impact({ style: ms > 20 ? ImpactStyle.Medium : ImpactStyle.Light });
+      return;
+    }
     navigator.vibrate?.(ms);
   } catch {
     return;
