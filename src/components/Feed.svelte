@@ -100,8 +100,15 @@
     }
   });
 
+  let card = $state<{ revealAll(): boolean } | null>(null);
+
+  function revealHook(): boolean {
+    return screenIndex === 0 && !!card?.revealAll();
+  }
+
   function advance(): void {
     if (!current || commit) return;
+    if (revealHook()) return;
     if (screenIndex < total - 1) {
       screenIndex++;
       playTick();
@@ -178,6 +185,12 @@
   let lastTouchEnd = 0;
   let onInteractive = false;
 
+  function handleTap(): void {
+    if (commit) return;
+    if (revealHook()) return;
+    scheduleTap();
+  }
+
   function scheduleTap(): void {
     if (tapTimer) clearTimeout(tapTimer);
     tapScheduledScreen = screenIndex;
@@ -190,7 +203,7 @@
   function onClick(e: MouseEvent): void {
     if (performance.now() - lastTouchEnd < 500) return;
     if ((e.target as HTMLElement).closest('button, a, input, label')) return;
-    scheduleTap();
+    handleTap();
   }
 
   function onTouchStart(e: TouchEvent): void {
@@ -242,7 +255,7 @@
       } else {
         prevTapT = now;
         prevTapX = curX;
-        scheduleTap();
+        handleTap();
       }
       return;
     }
@@ -302,7 +315,7 @@
         </div>
       {/if}
       <div class="slide" style:transform={slideTransform('current')}>
-        <FactCard fact={current} {screenIndex} />
+        <FactCard bind:this={card} fact={current} {screenIndex} />
       </div>
       {#if nextFact}
         <div class="slide" style:transform={slideTransform('next')} aria-hidden="true">
