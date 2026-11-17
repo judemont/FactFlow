@@ -73,7 +73,7 @@ jobs:
             keytool -list -keystore android/app/keystore.keystore -storepass "$KEYSTORE_PASSWORD"
             exit 1
           fi
-          if ! keytool -importkeystore -srckeystore android/app/keystore.keystore -srcstorepass "$KEYSTORE_PASSWORD" -srcalias "$KEY_ALIAS" -srckeypass "$KEY_PASS" -destkeystore /tmp/keystore-check.p12 -deststorepass check -destkeypass check -noprompt > /tmp/keystore-check.log 2>&1; then
+          if ! keytool -importkeystore -srckeystore android/app/keystore.keystore -srcstorepass "$KEYSTORE_PASSWORD" -srcalias "$KEY_ALIAS" -srckeypass "$KEY_PASS" -destkeystore /tmp/keystore-check.p12 -deststorepass check123 -destkeypass check123 -noprompt > /tmp/keystore-check.log 2>&1; then
             echo "::error::Reading the private key for alias '$KEY_ALIAS' failed - keytool said:"
             grep -v "stored" /tmp/keystore-check.log | head -5
             echo "::error::If the key uses the same password as the keystore, delete the KEY_PASSWORD secret so the workflow reuses KEYSTORE_PASSWORD; otherwise set KEY_PASSWORD to the actual key password"
