@@ -100,4 +100,22 @@ src/
 
 No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Tapping a liked fact reopens it inside FactsFlow (`?fact=<id>`; old `?gem=<id>` links still work) — the Wikipedia link stays one tap away inside the fact.
 
+## CI/CD
+
+GitHub Actions, all free tier:
+
+- **CI** — on every PR and push to `main`: `svelte-check` + build.
+- **Deploy web** — on every push to `main`: build then rsync `dist/` to the server over SSH. Skips gracefully (with a warning) until the SSH secrets below are set.
+- **Android APK** — manual trigger (Actions tab) or on a `v*` tag: builds the web bundle, syncs Capacitor, compiles a debug APK and uploads it as a downloadable artifact. Requires the Capacitor `android/` project to exist.
+
+Repository secrets (Settings → Secrets and variables → Actions) for the web deployment:
+
+| Secret | Value |
+| --- | --- |
+| `SSH_HOST` | Server host, e.g. `jdm.coffee` |
+| `SSH_USER` | SSH user on that server |
+| `SSH_PRIVATE_KEY` | Private key of a dedicated deploy key (public half in the server's `~/.ssh/authorized_keys`) |
+| `SSH_PORT` | Optional, defaults to `22` |
+| `DEPLOY_PATH` | Optional, defaults to `/var/www/factsflow/` |
+
 
