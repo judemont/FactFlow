@@ -96,9 +96,4 @@ src/
 
 No account, no analytics, no trackers. Likes, history, streak and settings live in `localStorage`; the only network traffic is read-only Wikipedia API calls. Likes are local only: they appear in the stats sheet history, count in your stats, and quietly bias which topics the feed serves next. Tapping a liked fact reopens it inside FactsFlow (`?fact=<id>`; old `?gem=<id>` links still work) — the Wikipedia link stays one tap away inside the fact.
 
-## Next steps
 
-- Topic classification via article categories instead of keyword guessing.
-- Background image fetch fallback (search for a lead image when `pageimages` returns none).
-- PWA support (offline fallback pool already works).
-- Optional on-device scoring calibration from like/skip signals.
