@@ -6,9 +6,19 @@ on:
     tags: ['v*']
 
 jobs:
-  apk:
+  guard:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('android/gradlew') != '' }}
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: echo "present=$([ -f android/gradlew ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  apk:
+    needs: guard
+    runs-on: ubuntu-latest
+    if: needs.guard.outputs.present == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
