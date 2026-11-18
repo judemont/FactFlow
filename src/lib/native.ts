@@ -6,6 +6,11 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 
 export const isNative = Capacitor.isNativePlatform();
 
+export function showGetApp(): boolean {
+  if (isNative) return false;
+  return /android/i.test(navigator.userAgent);
+}
+
 export interface Coords {
   lat: number;
   lon: number;
