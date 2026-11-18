@@ -154,6 +154,7 @@
         </a>
         <p class="made">
           Made by <a class="jdm" href="https://jdm.coffee" target="_blank" rel="noopener noreferrer">JdM</a>
+          · <a class="donate" href="https://jdm.coffee/donate/" target="_blank" rel="noopener noreferrer">♥ support</a>
         </p>
         <p class="copyright">© {new Date().getFullYear()} JdM · Facts from English Wikipedia (CC BY-SA)</p>
       </div>
@@ -427,6 +428,14 @@
     font-weight: 800;
     text-decoration: none;
     border-bottom: 1.5px solid var(--accent);
+  }
+  .donate {
+    color: var(--muted);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .donate:hover {
+    color: var(--accent);
   }
   .copyright {
     margin: 0;
