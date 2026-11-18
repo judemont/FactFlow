@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { feed, setMode, ensureAhead, onFactShown, openShared } from '../lib/feed';
+  import { initialSharedId, onSharedLink } from '../lib/native';
   import { toggleLike, isLiked } from '../lib/storage';
   import { playTick, playPop, haptic } from '../lib/sound';
   import { showToast } from '../lib/toast';
@@ -89,15 +90,18 @@
   });
 
   onMount(() => {
-    const params = new URLSearchParams(window.location.search);
-    const shared = params.get('fact') ?? params.get('gem');
-    if (shared) {
-      void openShared(shared).then((ok) => {
-        if (!ok) void setMode('foryou');
-      });
-    } else {
-      void setMode('foryou');
-    }
+    void initialSharedId().then((shared) => {
+      if (shared) {
+        void openShared(shared).then((ok) => {
+          if (!ok) void setMode('foryou');
+        });
+      } else {
+        void setMode('foryou');
+      }
+    });
+    onSharedLink((id) => {
+      void openShared(id).catch(() => undefined);
+    });
   });
 
   let card = $state<{ revealAll(): boolean } | null>(null);
