@@ -10,6 +10,7 @@
     type LikedEntry,
   } from '../lib/storage';
   import { showToast } from '../lib/toast';
+  import { showGetApp } from '../lib/native';
 
   let { onopen }: { onopen: (id: string) => void } = $props();
 
@@ -121,6 +122,17 @@
           <span>Sound</span>
           <span class="toggle" class:on={sound}><span class="knob"></span></span>
         </button>
+        {#if showGetApp()}
+          <a
+            class="setting getapp"
+            href="https://github.com/judemont/FactsFlow/releases/latest/download/app-release.apk"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span>Get the mobile app</span>
+            <span class="chip">APK</span>
+          </a>
+        {/if}
         <button class="setting danger" onclick={clear}>
           <span>Clear local data</span>
         </button>
@@ -334,6 +346,18 @@
   }
   .danger {
     color: #ff8c8c;
+  }
+  .getapp {
+    color: var(--accent);
+  }
+  .chip {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: #0a0a0c;
+    background: var(--accent);
+    padding: 3px 8px;
+    border-radius: 999px;
   }
   .toggle {
     width: 44px;
