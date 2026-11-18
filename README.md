@@ -8,7 +8,7 @@
 
 ---
 [factsflow.jdm.coffee](https://factsflow.jdm.coffee)
-
+---
 <p align="center">
   <a href="https://github.com/judemont/FactsFlow/releases/latest/download/app-release.apk"><img src="https://img.shields.io/badge/Download-Android_APK-ffb454?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app (APK)"></a>
 </p>
