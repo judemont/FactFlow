@@ -1,4 +1,8 @@
+import { Share } from '@capacitor/share';
 import type { Fact } from './types';
+import { isNative } from './native';
+
+const SITE_URL = 'https://factsflow.jdm.coffee';
 
 const W = 1080;
 const H = 1620;
@@ -40,8 +44,7 @@ function wrapText(
 }
 
 export function factUrl(fact: Fact): string {
-  const base = `${window.location.origin}${window.location.pathname}`;
-  return `${base}?fact=${encodeURIComponent(fact.id)}`;
+  return `${SITE_URL}/?fact=${encodeURIComponent(fact.id)}`;
 }
 
 export async function renderCard(fact: Fact): Promise<Blob | null> {
@@ -106,6 +109,20 @@ export type ShareResult = 'shared' | 'copied' | 'failed';
 
 export async function shareFact(fact: Fact): Promise<ShareResult> {
   const url = factUrl(fact);
+  if (isNative) {
+    try {
+      if (!(await Share.canShare())) return 'failed';
+      await Share.share({
+        title: fact.title,
+        text: fact.hook,
+        url,
+        dialogTitle: 'Share this fact',
+      });
+      return 'shared';
+    } catch {
+      return 'failed';
+    }
+  }
   if (typeof navigator.share === 'function') {
     try {
       const blob = await renderCard(fact);

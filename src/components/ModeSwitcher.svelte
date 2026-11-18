@@ -1,5 +1,6 @@
 <script lang="ts">
   import { feed, setMode } from '../lib/feed';
+  import { currentPosition, isNative } from '../lib/native';
   import { TOPICS } from '../lib/pool';
   import { showToast } from '../lib/toast';
   import { playTick } from '../lib/sound';
@@ -28,26 +29,41 @@
     open = false;
     playTick();
     if (mode === 'nearby') {
-      if (!navigator.geolocation) {
-        showToast('Location not available');
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          void setMode('nearby', null, {
-            lat: pos.coords.latitude,
-            lon: pos.coords.longitude,
-          });
+      void (async () => {
+        if (isNative) {
+          const coords = await currentPosition();
+          if (!coords) {
+            showToast('Location denied — showing today instead');
+            void setMode('foryou');
+            onchange();
+            return;
+          }
+          void setMode('nearby', null, coords);
           onchange();
           showToast('Facts near you');
-        },
-        () => {
-          showToast('Location denied — showing today instead');
-          void setMode('foryou');
-          onchange();
-        },
-        { timeout: 8000 },
-      );
+          return;
+        }
+        if (!navigator.geolocation) {
+          showToast('Location not available');
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            void setMode('nearby', null, {
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+            });
+            onchange();
+            showToast('Facts near you');
+          },
+          () => {
+            showToast('Location denied — showing today instead');
+            void setMode('foryou');
+            onchange();
+          },
+          { timeout: 8000 },
+        );
+      })();
       return;
     }
     void setMode(mode, topic);
