@@ -4,6 +4,10 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def versionNameRaw = (System.getenv('VERSION_NAME') ?: project.findProperty('VERSION_NAME') ?: '1.0') as String
+def versionCodeRaw = (System.getenv('VERSION_CODE') ?: project.findProperty('VERSION_CODE') ?: '1') as String
+def autoVersionCode = versionCodeRaw.isInteger() ? versionCodeRaw.toInteger() : 1
+
 apply plugin: 'com.android.application'
 
 android {
@@ -13,8 +17,8 @@ android {
         applicationId "coffee.jdm.factsflow"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode autoVersionCode
+        versionName versionNameRaw
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

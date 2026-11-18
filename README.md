@@ -8,6 +8,11 @@
 
 ---
 [factsflow.jdm.coffee](https://factsflow.jdm.coffee)
+
+<p align="center">
+  <a href="https://github.com/judemont/FactsFlow/releases/latest/download/app-release.apk"><img src="https://img.shields.io/badge/Download-Android_APK-ffb454?style=for-the-badge&logo=android&logoColor=white" alt="Download the Android app (APK)"></a>
+</p>
+
 ---
 
 FactsFlow is a TikTok-style feed where every "video" is a true story pulled from the best of English Wikipedia. Each fact opens with a hook built to stop your thumb, unfolds in a few short screens — context, development, twist — and ends one tap away from the full article.
