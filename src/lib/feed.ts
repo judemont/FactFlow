@@ -2,7 +2,7 @@ import { get, writable } from 'svelte/store';
 import { buildFact, type RawArticle } from './fact';
 import * as wiki from './wiki';
 import { curatedFacts, fallbackFacts, topicSeeds, TOPICS } from './pool';
-import { isSeen, markSeen, recordView, getLikeTopicCounts } from './storage';
+import { isSeen, recordView, getLikeTopicCounts } from './storage';
 import { hashString, shuffle } from './utils';
 import { showToast } from './toast';
 import type { Fact, Mode, Topic } from './types';
@@ -109,7 +109,7 @@ function randomBatchSupplier(): Supplier {
         sup.done = true;
         return null;
       }
-      const batch = shuffle(await wiki.getRandomTitles(100).catch(() => []));
+      const batch = shuffle((await wiki.getRandomTitles(100).catch(() => [])).filter((t) => !isSeen(t)));
       if (!batch.length) {
         emptyBatches++;
         continue;
@@ -174,6 +174,7 @@ function replenish(mode: Mode, topic: Topic | null): void {
   } else {
     seeds = TOPICS.flatMap((t) => topicSeeds[t.id].map((title) => ({ title, topic: t.id })));
   }
+  seeds = seeds.filter((s) => !isSeen(s.title));
   suppliers.push(...shuffle(seeds).map(({ title, topic }) => pageSupplier(title, topic)));
   suppliers.push(randomBatchSupplier());
 }
@@ -208,19 +209,29 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
         }
         return null;
       },
-      ...shuffle(weightedSeeds()).map(({ title, topic }) => pageSupplier(title, topic)),
+      ...shuffle(weightedSeeds())
+        .filter(({ title }) => !isSeen(title))
+        .map(({ title, topic }) => pageSupplier(title, topic)),
+      randomBatchSupplier(),
     ];
   }
 
   if (mode === 'onthisday') {
     return [
       onThisDaySupplier(),
-      ...shuffle(topicSeeds.history).map((title) => pageSupplier(title, 'history')),
+      ...shuffle(topicSeeds.history)
+        .filter((title) => !isSeen(title))
+        .map((title) => pageSupplier(title, 'history')),
     ];
   }
 
   if (mode === 'topics' && topic) {
-    return shuffle(topicSeeds[topic]).map((title) => pageSupplier(title, topic));
+    return [
+      ...shuffle(topicSeeds[topic])
+        .filter((title) => !isSeen(title))
+        .map((title) => pageSupplier(title, topic)),
+      randomBatchSupplier(),
+    ];
   }
 
   if (mode === 'nearby' && coords) {
@@ -331,8 +342,7 @@ export async function setMode(
 }
 
 export function onFactShown(fact: Fact): string[] {
-  markSeen(fact.id);
-  return recordView(fact.id);
+  return recordView(fact.id, fact.title);
 }
 
 export async function factFromId(id: string): Promise<Fact | null> {
