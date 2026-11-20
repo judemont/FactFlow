@@ -155,7 +155,7 @@ export function markSeen(id: string): void {
   const seen = read<string[]>(KEYS.seen, []);
   if (seen.includes(id)) return;
   seen.push(id);
-  write(KEYS.seen, seen.slice(-300));
+  write(KEYS.seen, seen.slice(-1000));
 }
 
 export function recordView(id: string): string[] {

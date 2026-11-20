@@ -109,7 +109,7 @@ function randomBatchSupplier(): Supplier {
         sup.done = true;
         return null;
       }
-      const batch = shuffle(await wiki.getRandomTitles(20).catch(() => []));
+      const batch = shuffle(await wiki.getRandomTitles(100).catch(() => []));
       if (!batch.length) {
         emptyBatches++;
         continue;
@@ -265,14 +265,14 @@ async function pump(gen: number): Promise<void> {
       const fact = buildFact(raw);
       if (!fact) continue;
       if (!fact.rare && hashString(fact.id) % 9 === 0) fact.rare = true;
+      if (pass < 8 && isSeen(fact.id)) continue;
+      if (added.has(fact.id)) continue;
+      added.add(fact.id);
       if (!fact.image) {
         fact.image = (await wiki.findArticleImage(raw.title).catch(() => null)) ?? undefined;
       }
       if (gen !== generation) return;
       if (!fact.image) continue;
-      if (pass < 2 && isSeen(fact.id)) continue;
-      if (added.has(fact.id)) continue;
-      added.add(fact.id);
       feed.update((f) => ({ ...f, facts: [...f.facts, fact] }));
     }
     if (gen !== generation) return;
@@ -280,7 +280,7 @@ async function pump(gen: number): Promise<void> {
     if (after.facts.length < desired) {
       const missing = desired - after.facts.length;
       const extra = fallbackFacts()
-        .filter((g) => !after.facts.some((x) => x.id === g.id))
+        .filter((g) => !after.facts.some((x) => x.id === g.id) && !isSeen(g.id))
         .slice(0, missing);
       for (const g of extra) {
         if (!g.image) {
