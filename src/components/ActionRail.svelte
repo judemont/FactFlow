@@ -20,10 +20,42 @@
     if (result === 'copied') showToast('Link copied');
     else if (result === 'failed') showToast('Sharing unavailable');
   }
+
+  let downAt = 0;
+  let downX = 0;
+  let downY = 0;
+  let lastFire = 0;
+
+  function onLikeDown(e: PointerEvent): void {
+    downAt = performance.now();
+    downX = e.clientX;
+    downY = e.clientY;
+  }
+
+  function onLikeUp(e: PointerEvent): void {
+    if (performance.now() - downAt > 500) return;
+    if (Math.hypot(e.clientX - downX, e.clientY - downY) > 12) return;
+    fireLike(e.clientX, e.clientY);
+  }
+
+  function fireLike(x?: number, y?: number): void {
+    const now = performance.now();
+    if (now - lastFire < 400) return;
+    lastFire = now;
+    onlike(x, y);
+  }
 </script>
 
 <div class="rail">
-  <button class="act" class:liked aria-label={liked ? 'Unlike' : 'Like'} aria-pressed={liked} onclick={() => onlike()}>
+  <button
+    class="act"
+    class:liked
+    aria-label={liked ? 'Unlike' : 'Like'}
+    aria-pressed={liked}
+    onpointerdown={onLikeDown}
+    onpointerup={onLikeUp}
+    onclick={() => fireLike()}
+  >
     <svg viewBox="0 0 24 24" width="26" height="26" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>

@@ -160,20 +160,16 @@ function nearbySupplier(c: { lat: number; lon: number }): Supplier {
   return sup;
 }
 
-function replenish(mode: Mode, topic: Topic | null): void {
+function replenish(mode: Mode): void {
   pass++;
-  if (mode === 'onthisday' || mode === 'nearby') {
+  if (mode === 'onthisday' || mode === 'nearby' || mode === 'topics') {
     feed.update((f) => ({ ...f, mode: 'foryou', topic: null }));
     showToast('All caught up here — back to For you');
     suppliers.push(...makeSuppliers('foryou', null), randomBatchSupplier());
     return;
   }
   let seeds: { title: string; topic: Topic }[];
-  if (mode === 'topics' && topic) {
-    seeds = topicSeeds[topic].map((title) => ({ title, topic }));
-  } else {
-    seeds = TOPICS.flatMap((t) => topicSeeds[t.id].map((title) => ({ title, topic: t.id })));
-  }
+  seeds = TOPICS.flatMap((t) => topicSeeds[t.id].map((title) => ({ title, topic: t.id })));
   seeds = seeds.filter((s) => !isSeen(s.title));
   suppliers.push(...shuffle(seeds).map(({ title, topic }) => pageSupplier(title, topic)));
   suppliers.push(randomBatchSupplier());
@@ -230,7 +226,6 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
       ...shuffle(topicSeeds[topic])
         .filter((title) => !isSeen(title))
         .map((title) => pageSupplier(title, topic)),
-      randomBatchSupplier(),
     ];
   }
 
@@ -260,7 +255,7 @@ async function pump(gen: number): Promise<void> {
       attempts++;
       const sup = suppliers.shift();
       if (!sup) {
-        replenish(get(feed).mode, get(feed).topic);
+        replenish(get(feed).mode);
         if (!suppliers.length) break;
         continue;
       }

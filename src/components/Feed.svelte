@@ -315,7 +315,7 @@
     <div class="stage" class:dragging class:notrans>
       {#if prevFact}
         <div class="slide" style:transform={slideTransform('prev')} aria-hidden="true">
-          <FactCard fact={prevFact} screenIndex={0} />
+          <FactCard fact={prevFact} screenIndex={0} active={false} />
         </div>
       {/if}
       <div class="slide" style:transform={slideTransform('current')}>
@@ -323,7 +323,7 @@
       </div>
       {#if nextFact}
         <div class="slide" style:transform={slideTransform('next')} aria-hidden="true">
-          <FactCard fact={nextFact} screenIndex={0} />
+          <FactCard fact={nextFact} screenIndex={0} active={false} />
         </div>
       {/if}
     </div>

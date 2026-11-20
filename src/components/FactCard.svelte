@@ -7,9 +7,11 @@
   let {
     fact,
     screenIndex,
+    active = true,
   }: {
     fact: Fact;
     screenIndex: number;
+    active?: boolean;
   } = $props();
 
   const isHook = $derived(screenIndex === 0);
@@ -30,6 +32,10 @@
       matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduced) {
       hookShown = hookWords.length;
+      return;
+    }
+    if (!active) {
+      hookShown = 0;
       return;
     }
     hookShown = 0;
