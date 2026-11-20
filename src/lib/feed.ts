@@ -2,7 +2,7 @@ import { get, writable } from 'svelte/store';
 import { buildFact, type RawArticle } from './fact';
 import * as wiki from './wiki';
 import { curatedFacts, fallbackFacts, topicSeeds, TOPICS } from './pool';
-import { isSeen, markSeen, recordView, getLikeTopicCounts } from './storage';
+import { isSeen, recordView, getLikeTopicCounts } from './storage';
 import { hashString, shuffle } from './utils';
 import { showToast } from './toast';
 import type { Fact, Mode, Topic } from './types';
@@ -109,7 +109,7 @@ function randomBatchSupplier(): Supplier {
         sup.done = true;
         return null;
       }
-      const batch = shuffle(await wiki.getRandomTitles(100).catch(() => []));
+      const batch = shuffle((await wiki.getRandomTitles(100).catch(() => [])).filter((t) => !isSeen(t)));
       if (!batch.length) {
         emptyBatches++;
         continue;
@@ -160,20 +160,17 @@ function nearbySupplier(c: { lat: number; lon: number }): Supplier {
   return sup;
 }
 
-function replenish(mode: Mode, topic: Topic | null): void {
+function replenish(mode: Mode): void {
   pass++;
-  if (mode === 'onthisday' || mode === 'nearby') {
+  if (mode === 'onthisday' || mode === 'nearby' || mode === 'topics') {
     feed.update((f) => ({ ...f, mode: 'foryou', topic: null }));
     showToast('All caught up here — back to For you');
     suppliers.push(...makeSuppliers('foryou', null), randomBatchSupplier());
     return;
   }
   let seeds: { title: string; topic: Topic }[];
-  if (mode === 'topics' && topic) {
-    seeds = topicSeeds[topic].map((title) => ({ title, topic }));
-  } else {
-    seeds = TOPICS.flatMap((t) => topicSeeds[t.id].map((title) => ({ title, topic: t.id })));
-  }
+  seeds = TOPICS.flatMap((t) => topicSeeds[t.id].map((title) => ({ title, topic: t.id })));
+  seeds = seeds.filter((s) => !isSeen(s.title));
   suppliers.push(...shuffle(seeds).map(({ title, topic }) => pageSupplier(title, topic)));
   suppliers.push(randomBatchSupplier());
 }
@@ -208,19 +205,28 @@ function makeSuppliers(mode: Mode, topic: Topic | null): Supplier[] {
         }
         return null;
       },
-      ...shuffle(weightedSeeds()).map(({ title, topic }) => pageSupplier(title, topic)),
+      ...shuffle(weightedSeeds())
+        .filter(({ title }) => !isSeen(title))
+        .map(({ title, topic }) => pageSupplier(title, topic)),
+      randomBatchSupplier(),
     ];
   }
 
   if (mode === 'onthisday') {
     return [
       onThisDaySupplier(),
-      ...shuffle(topicSeeds.history).map((title) => pageSupplier(title, 'history')),
+      ...shuffle(topicSeeds.history)
+        .filter((title) => !isSeen(title))
+        .map((title) => pageSupplier(title, 'history')),
     ];
   }
 
   if (mode === 'topics' && topic) {
-    return shuffle(topicSeeds[topic]).map((title) => pageSupplier(title, topic));
+    return [
+      ...shuffle(topicSeeds[topic])
+        .filter((title) => !isSeen(title))
+        .map((title) => pageSupplier(title, topic)),
+    ];
   }
 
   if (mode === 'nearby' && coords) {
@@ -249,7 +255,7 @@ async function pump(gen: number): Promise<void> {
       attempts++;
       const sup = suppliers.shift();
       if (!sup) {
-        replenish(get(feed).mode, get(feed).topic);
+        replenish(get(feed).mode);
         if (!suppliers.length) break;
         continue;
       }
@@ -331,8 +337,7 @@ export async function setMode(
 }
 
 export function onFactShown(fact: Fact): string[] {
-  markSeen(fact.id);
-  return recordView(fact.id);
+  return recordView(fact.id, fact.title);
 }
 
 export async function factFromId(id: string): Promise<Fact | null> {

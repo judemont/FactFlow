@@ -151,14 +151,21 @@ export function isSeen(id: string): boolean {
   return read<string[]>(KEYS.seen, []).includes(id);
 }
 
-export function markSeen(id: string): void {
+export function markSeen(id: string, title?: string): void {
   const seen = read<string[]>(KEYS.seen, []);
-  if (seen.includes(id)) return;
-  seen.push(id);
-  write(KEYS.seen, seen.slice(-1000));
+  let changed = false;
+  if (!seen.includes(id)) {
+    seen.push(id);
+    changed = true;
+  }
+  if (title && !seen.includes(title)) {
+    seen.push(title);
+    changed = true;
+  }
+  if (changed) write(KEYS.seen, seen.slice(-1000));
 }
 
-export function recordView(id: string): string[] {
+export function recordView(id: string, title?: string): string[] {
   const today = dayKey();
   const weekly = read<Record<string, number>>(KEYS.weekly, {});
   weekly[today] = (weekly[today] ?? 0) + 1;
@@ -182,7 +189,7 @@ export function recordView(id: string): string[] {
   history.push({ id, day: today });
   write(KEYS.history, history.slice(-500));
 
-  markSeen(id);
+  markSeen(id, title);
 
   const milestones: string[] = [];
   const todayCount = weekly[today] ?? 0;
